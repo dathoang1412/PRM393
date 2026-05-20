@@ -5,14 +5,10 @@ class Submission {
   final String filePath;
   final String content;
   
-  double score1 = 0;
-  double score2 = 0;
-  double score3 = 0;
+  List<double> scores = [];
   String comment = "";
   
-  double aiScore1 = 0;
-  double aiScore2 = 0;
-  double aiScore3 = 0;
+  List<double> aiScores = [];
   String aiComment = "";
   bool hasAiGraded = false;
 
@@ -25,6 +21,28 @@ class Submission {
     required this.content,
   });
 
-  double get total => score1 + score2 + score3;
-  double get aiTotal => aiScore1 + aiScore2 + aiScore3;
+  void initScores(ExamType exam) {
+    if (scores.length != exam.criteria.length) {
+      final newScores = List.filled(exam.criteria.length, 0.0);
+      for (int i = 0; i < exam.criteria.length; i++) {
+        if (i < scores.length) {
+          newScores[i] = scores[i];
+        }
+      }
+      scores = newScores;
+    }
+    if (aiScores.length != exam.criteria.length) {
+      final newAiScores = List.filled(exam.criteria.length, 0.0);
+      for (int i = 0; i < exam.criteria.length; i++) {
+        if (i < aiScores.length) {
+          newAiScores[i] = aiScores[i];
+        }
+      }
+      aiScores = newAiScores;
+    }
+  }
+
+  double get total => scores.fold(0.0, (sum, s) => sum + s);
+  double get aiTotal => aiScores.fold(0.0, (sum, s) => sum + s);
 }
+

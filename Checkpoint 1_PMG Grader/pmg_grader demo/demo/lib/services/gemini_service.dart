@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/submission.dart';
@@ -19,34 +20,41 @@ class GeminiService {
 
   Future<void> gradeSubmission(Submission sub, ExamType exam, String apiKey) async {
     String rubricsPrompt = '';
+    final int n = exam.criteria.length;
+    
     if (exam.customRubric != null && exam.customRubric!.isNotEmpty) {
       rubricsPrompt = '''
 You are an expert academic grader. Grade this student's submission strictly based on the following custom grading rubric provided by the teacher (extracted from a Word Document):
 """
 ${exam.customRubric}
 """
-Please analyze the submission and assign scores to 3 primary components as outlined in this rubric. If the rubric does not specify 3 distinct sections, group your analysis into three logical criteria and distribute the scores.
+Please analyze the submission and assign scores to $n primary components as outlined in this rubric. Distribute the scores across the criteria.
 ''';
     } else {
-      rubricsPrompt = '''
-You are an expert academic grader. Grade this student's submission based on these 3 criteria:
-1. ${exam.criteria[0]}
-2. ${exam.criteria[1]}
-3. ${exam.criteria[2]}
-''';
+      rubricsPrompt = 'You are an expert academic grader. Grade this student\'s submission based on these $n criteria:\n';
+      for (int i = 0; i < n; i++) {
+        rubricsPrompt += '${i + 1}. ${exam.criteria[i].name} (Maximum score: ${exam.criteria[i].maxScore10} points on a 10-point scale)\n';
+      }
+    }
+
+    final jsonFields = {};
+    for (int i = 1; i <= n; i++) {
+      jsonFields['"score$i"'] = '<number (0 to ${exam.criteria[i - 1].maxScore10})>';
     }
 
     final prompt = '''
 $rubricsPrompt
+
+Although the original rubric might be out of 100 points, you MUST evaluate and return the scores scaled to a 10-point scale.
+Here are the criteria and their max scores on a 10-point scale:
+${exam.criteria.asMap().entries.map((e) => '- ${e.value.name}: Max ${e.value.maxScore10} points').join('\n')}
 
 Submission content:
 ${sub.content}
 
 Return ONLY valid JSON (no markdown block, just the json object):
 {
-  "score1": <number>,
-  "score2": <number>,
-  "score3": <number>,
+  ${jsonFields.entries.map((e) => '${e.key}: ${e.value}').join(',\n  ')},
   "comment": "<string detailed comment explaining your score based on the rubric>"
 }
 ''';
@@ -75,16 +83,19 @@ Return ONLY valid JSON (no markdown block, just the json object):
       final resultText = data['candidates'][0]['content']['parts'][0]['text'];
       final resultJson = jsonDecode(resultText);
       
-      sub.aiScore1 = (resultJson['score1'] as num).toDouble();
-      sub.aiScore2 = (resultJson['score2'] as num).toDouble();
-      sub.aiScore3 = (resultJson['score3'] as num).toDouble();
+      final List<double> newAiScores = [];
+      for (int i = 1; i <= n; i++) {
+        final val = resultJson['score$i'];
+        newAiScores.add((val as num?)?.toDouble() ?? 0.0);
+      }
+      sub.aiScores = newAiScores;
       sub.aiComment = resultJson['comment']?.toString() ?? "";
       sub.hasAiGraded = true;
     } else {
-      print("========== Gemini API Error ==========");
-      print("Status Code: ${response.statusCode}");
-      print("Response Body: ${response.body}");
-      print("=====================================");
+      debugPrint("========== Gemini API Error ==========");
+      debugPrint("Status Code: ${response.statusCode}");
+      debugPrint("Response Body: ${response.body}");
+      debugPrint("=====================================");
       throw Exception("Gemini Error: ${response.statusCode} - ${response.body}");
     }
   }

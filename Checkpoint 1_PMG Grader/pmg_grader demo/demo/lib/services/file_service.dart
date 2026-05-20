@@ -49,6 +49,7 @@ class FileService {
         ));
       }
     }
+    loadedSubmissions.sort((a, b) => a.fileName.toLowerCase().compareTo(b.fileName.toLowerCase()));
     return loadedSubmissions;
   }
 

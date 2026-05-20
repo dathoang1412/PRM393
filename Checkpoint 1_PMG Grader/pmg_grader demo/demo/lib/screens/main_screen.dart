@@ -6,6 +6,10 @@ import '../models/exam_type.dart';
 import '../services/file_service.dart';
 import '../services/gemini_service.dart';
 import '../services/grading_export_service.dart';
+import '../widgets/app_bar_widget.dart';
+import '../widgets/sidebar_widget.dart';
+import '../widgets/content_viewer_widget.dart';
+import '../widgets/grading_panel_widget.dart';
 
 class MainGradingScreen extends StatefulWidget {
   const MainGradingScreen({super.key});
@@ -24,11 +28,9 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
   bool isLoading = false;
   String apiKey = "";
 
-  final TextEditingController _score1Controller = TextEditingController();
-  final TextEditingController _score2Controller = TextEditingController();
-  final TextEditingController _score3Controller = TextEditingController();
+  final List<TextEditingController> _scoreControllers = [];
   final TextEditingController _commentController = TextEditingController();
-  final TextEditingController _markerController = TextEditingController(text: "Teacher");
+  final TextEditingController _markerController = TextEditingController(text: ""); // empty by default for validation
 
   ExamType? selectedGlobalExamType;
 
@@ -51,9 +53,9 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
 
   @override
   void dispose() {
-    _score1Controller.dispose();
-    _score2Controller.dispose();
-    _score3Controller.dispose();
+    for (var ctrl in _scoreControllers) {
+      ctrl.dispose();
+    }
     _commentController.dispose();
     _markerController.dispose();
     super.dispose();
@@ -88,22 +90,44 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
     if (index < 0 || index >= submissions.length) return;
     
     final sub = submissions[index];
-    _score1Controller.text = sub.score1.toString();
-    _score2Controller.text = sub.score2.toString();
-    _score3Controller.text = sub.score3.toString();
-    _commentController.text = sub.comment;
     if (sub.examType == null && selectedGlobalExamType != null) {
       sub.examType = selectedGlobalExamType;
     }
+
+    final exam = sub.examType ?? selectedGlobalExamType!;
+    sub.initScores(exam);
+
+    // Dispose old score controllers
+    for (var ctrl in _scoreControllers) {
+      ctrl.dispose();
+    }
+    _scoreControllers.clear();
+
+    // Create new score controllers
+    for (int i = 0; i < exam.criteria.length; i++) {
+      final val = sub.scores[i];
+      final ctrl = TextEditingController(text: val.toString());
+      ctrl.addListener(() {
+        setState(() {}); // refresh the UI for Total Score calculation
+      });
+      _scoreControllers.add(ctrl);
+    }
+
+    _commentController.text = sub.comment;
   }
 
   void _saveCurrentScores() {
     if (currentIndex == -1) return;
     
     final sub = submissions[currentIndex];
-    sub.score1 = double.tryParse(_score1Controller.text) ?? 0;
-    sub.score2 = double.tryParse(_score2Controller.text) ?? 0;
-    sub.score3 = double.tryParse(_score3Controller.text) ?? 0;
+    final exam = sub.examType ?? selectedGlobalExamType!;
+    sub.initScores(exam);
+
+    for (int i = 0; i < exam.criteria.length; i++) {
+      if (i < _scoreControllers.length) {
+        sub.scores[i] = double.tryParse(_scoreControllers[i].text) ?? 0.0;
+      }
+    }
     sub.comment = _commentController.text;
     sub.graded = true;
   }
@@ -130,7 +154,7 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
 
   Future<void> _askAi() async {
     if (apiKey.isEmpty) {
-      _showSnackBar("Please set Gemini API Key in Settings.");
+      _showSnackBar("Vui lòng đặt Gemini API Key trong phần cài đặt (Settings).");
       return;
     }
     if (currentIndex == -1) return;
@@ -144,10 +168,10 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
       await _geminiService.gradeSubmission(sub, exam, apiKey);
       setState(() {});
     } catch (e, stack) {
-      print("========== Grader Error Logging ==========");
-      print("Error calling Gemini: $e");
-      print("Stack trace: $stack");
-      print("=========================================");
+      debugPrint("========== Grader Error Logging ==========");
+      debugPrint("Error calling Gemini: $e");
+      debugPrint("Stack trace: $stack");
+      debugPrint("=========================================");
       _showSnackBar(e.toString());
     } finally {
       setState(() => isLoading = false);
@@ -159,22 +183,33 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
     final sub = submissions[currentIndex];
     if (!sub.hasAiGraded) return;
 
+    final exam = sub.examType ?? selectedGlobalExamType!;
+    sub.initScores(exam);
+
     setState(() {
-      _score1Controller.text = sub.aiScore1.toString();
-      _score2Controller.text = sub.aiScore2.toString();
-      _score3Controller.text = sub.aiScore3.toString();
+      for (int i = 0; i < exam.criteria.length; i++) {
+        if (i < sub.aiScores.length && i < _scoreControllers.length) {
+          _scoreControllers[i].text = sub.aiScores[i].toString();
+        }
+      }
       _commentController.text = sub.aiComment;
       _saveCurrentScores();
     });
   }
 
   Future<void> _exportData() async {
+    final markerName = _markerController.text.trim();
+    if (markerName.isEmpty) {
+      _showSnackBar("Vui lòng nhập tên người chấm trước khi xuất Excel!");
+      return;
+    }
+
     _saveCurrentScores();
     try {
-      await _exportService.exportToExcel(submissions, _markerController.text);
-      _showSnackBar('Exported successfully!');
+      await _exportService.exportToExcel(submissions, markerName);
+      _showSnackBar('Xuất tệp Excel thành công!');
     } catch (e) {
-      _showSnackBar('Error exporting: $e');
+      _showSnackBar('Lỗi khi xuất tệp: $e');
     }
   }
 
@@ -183,7 +218,7 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
     final sub = submissions[currentIndex];
     final exam = sub.examType ?? selectedGlobalExamType;
     if (exam == null) {
-      _showSnackBar("Please assign an exam type first.");
+      _showSnackBar("Vui lòng chọn đề thi trước.");
       return;
     }
 
@@ -193,13 +228,35 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
       if (rubricText != null) {
         setState(() {
           exam.customRubric = rubricText;
-          _showSnackBar("Successfully imported Word rubric for ${exam.code}!");
+          _showSnackBar("Nạp Word Rubric thành công cho ${exam.code}!");
         });
       }
     } catch (e) {
-      _showSnackBar("Failed to import Word rubric: $e");
+      _showSnackBar("Lỗi khi nhập Word Rubric: $e");
     } finally {
       setState(() => isLoading = false);
+    }
+  }
+
+  Future<void> _showConfigureCriteriaDialog(ExamType exam) async {
+    final newCriteria = await showDialog<List<Criterion>>(
+      context: context,
+      builder: (context) => _ConfigureCriteriaDialog(exam: exam),
+    );
+
+    if (newCriteria != null) {
+      setState(() {
+        exam.criteria = newCriteria;
+        // Sync and re-initialize scores/aiScores for all submissions of this exam type
+        for (var sub in submissions) {
+          if (sub.examType == exam || (sub.examType == null && selectedGlobalExamType == exam)) {
+            sub.initScores(exam);
+          }
+        }
+        // Reload controllers for active submission
+        _loadSubmission(currentIndex);
+        _showSnackBar("Cập nhật tiêu chí đề thi thành công!");
+      });
     }
   }
 
@@ -208,7 +265,7 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("Settings"),
+        title: const Text("Cài đặt API Key"),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -217,18 +274,18 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
             TextField(
               controller: keyCtrl,
               obscureText: true,
-              decoration: const InputDecoration(hintText: "Enter AI Studio Key"),
+              decoration: const InputDecoration(hintText: "Nhập khóa AI Studio Key"),
             ),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Hủy")),
           ElevatedButton(
             onPressed: () {
               _saveApiKey(keyCtrl.text);
               Navigator.pop(context);
             },
-            child: const Text("Save"),
+            child: const Text("Lưu"),
           ),
         ],
       ),
@@ -243,16 +300,63 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
         children: [
           Column(
             children: [
-              _buildAppBar(),
+              AppBarWidget(
+                markerController: _markerController,
+                onLoadZip: _pickZipAndExtract,
+                onExportExcel: _exportData,
+                onShowSettings: _showSettingsDialog,
+                hasSubmissions: submissions.isNotEmpty,
+              ),
               Expanded(
                 child: submissions.isEmpty
                     ? _buildEmptyState()
                     : Row(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          _buildSidebar(),
-                          Expanded(child: _buildMainContent()),
-                          _buildGradingPanel(),
+                          SidebarWidget(
+                            submissions: submissions,
+                            currentIndex: currentIndex,
+                            onSubmissionSelected: (index) {
+                              _saveCurrentScores();
+                              setState(() {
+                                currentIndex = index;
+                                _loadSubmission(index);
+                              });
+                            },
+                          ),
+                          Expanded(
+                            child: ContentViewerWidget(
+                              submission: submissions[currentIndex],
+                              currentIndex: currentIndex,
+                              totalSubmissions: submissions.length,
+                              onExamTypeChanged: (val) {
+                                setState(() {
+                                  submissions[currentIndex].examType = val;
+                                  _loadSubmission(currentIndex); // reload controllers for new type
+                                });
+                              },
+                              onImportDocxRubric: _importDocxRubric,
+                              onConfigureCriteria: () => _showConfigureCriteriaDialog(submissions[currentIndex].examType ?? selectedGlobalExamType ?? defaultExamTypes.first),
+                              onPrev: currentIndex > 0 ? _prevSubmission : null,
+                              onNext: currentIndex < submissions.length - 1 ? _nextSubmission : null,
+                            ),
+                          ),
+                          GradingPanelWidget(
+                            submission: submissions[currentIndex],
+                            onAskAi: _askAi,
+                            onCopyAiToTeacher: _copyAiToTeacher,
+                            onSaveScores: () {
+                              _saveCurrentScores();
+                              if (currentIndex < submissions.length - 1) {
+                                _nextSubmission();
+                              } else {
+                                _showSnackBar("Đã hoàn tất chấm điểm toàn bộ bài nộp!");
+                              }
+                            },
+                            scoreControllers: _scoreControllers,
+                            commentController: _commentController,
+                            hasNext: currentIndex < submissions.length - 1,
+                          ),
                         ],
                       ),
               ),
@@ -268,454 +372,194 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
     );
   }
 
-  Widget _buildAppBar() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(bottom: BorderSide(color: Theme.of(context).dividerColor.withOpacity(0.1))),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.auto_stories_rounded, size: 32, color: Color(0xFF6366F1)),
-          const SizedBox(width: 12),
-          Text(
-            'PMG GRADER',
-            style: GoogleFonts.outfit(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.2,
-              color: const Color(0xFF1E293B),
-            ),
-          ),
-          const Spacer(),
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: _showSettingsDialog,
-            tooltip: "Settings",
-          ),
-          const SizedBox(width: 16),
-          ElevatedButton.icon(
-            onPressed: _pickZipAndExtract,
-            icon: const Icon(Icons.folder_zip_rounded),
-            label: const Text('Load Zip'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.primary,
-              foregroundColor: Theme.of(context).colorScheme.onPrimary,
-            ),
-          ),
-          const SizedBox(width: 12),
-          if (submissions.isNotEmpty)
-            OutlinedButton.icon(
-              onPressed: _exportData,
-              icon: const Icon(Icons.file_download_rounded),
-              label: const Text('Export Excel'),
-            ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildEmptyState() {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.folder_zip_rounded, size: 80, color: Theme.of(context).colorScheme.primary.withOpacity(0.5)),
+          Icon(Icons.folder_zip_rounded, size: 80, color: const Color(0xFF6366F1).withValues(alpha: 0.5)),
           const SizedBox(height: 24),
-          const Text(
-            'No submissions loaded',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+          Text(
+            'Chưa có bài nộp nào được tải lên',
+            style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: const Color(0xFF1E293B)),
           ),
           const SizedBox(height: 8),
-          const Text('Select a .zip file containing submissions to extract and grade.', style: TextStyle(color: Color(0xFF64748B))),
+          const Text('Chọn một tệp .zip chứa các bài nộp để bắt đầu chấm điểm.', style: TextStyle(color: Color(0xFF64748B))),
           const SizedBox(height: 32),
           ElevatedButton(
             onPressed: _pickZipAndExtract,
-            style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16)),
-            child: const Text('Load Submissions Zip'),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+              backgroundColor: const Color(0xFF6366F1),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+            ),
+            child: const Text('Tải tệp .zip bài nộp'),
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildSidebar() {
-    return Container(
-      width: 250,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(right: BorderSide(color: Theme.of(context).dividerColor.withOpacity(0.1))),
+class _ConfigureCriteriaDialog extends StatefulWidget {
+  final ExamType exam;
+
+  const _ConfigureCriteriaDialog({required this.exam});
+
+  @override
+  State<_ConfigureCriteriaDialog> createState() => _ConfigureCriteriaDialogState();
+}
+
+class _ConfigureCriteriaDialogState extends State<_ConfigureCriteriaDialog> {
+  late List<TextEditingController> _nameControllers;
+  late List<TextEditingController> _scoreControllers;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameControllers = widget.exam.criteria.map((c) => TextEditingController(text: c.name)).toList();
+    _scoreControllers = widget.exam.criteria.map((c) => TextEditingController(text: c.maxScore100.toString())).toList();
+  }
+
+  @override
+  void dispose() {
+    for (var c in _nameControllers) {
+      c.dispose();
+    }
+    for (var c in _scoreControllers) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  void _addCriterion() {
+    setState(() {
+      _nameControllers.add(TextEditingController(text: 'Question ${_nameControllers.length + 1}'));
+      _scoreControllers.add(TextEditingController(text: '10.0'));
+    });
+  }
+
+  void _deleteCriterion(int index) {
+    setState(() {
+      _nameControllers[index].dispose();
+      _nameControllers.removeAt(index);
+      _scoreControllers[index].dispose();
+      _scoreControllers.removeAt(index);
+    });
+  }
+
+  double _calculateTotalSum() {
+    double total = 0.0;
+    for (var ctrl in _scoreControllers) {
+      total += double.tryParse(ctrl.text) ?? 0.0;
+    }
+    return total;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final totalSum = _calculateTotalSum();
+    return AlertDialog(
+      title: Text(
+        'Cấu hình tiêu chí - Mã đề ${widget.exam.code}',
+        style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Text(
-              'Submissions (${submissions.length})',
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF1E293B)),
-            ),
-          ),
-          Expanded(
-            child: ListView.builder(
-              itemCount: submissions.length,
-              itemBuilder: (context, index) {
-                final sub = submissions[index];
-                final isSelected = index == currentIndex;
-                return ListTile(
-                  selected: isSelected,
-                  selectedTileColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                  leading: Icon(
-                    sub.graded ? Icons.check_circle : Icons.description_outlined,
-                    color: sub.graded ? Colors.green : (isSelected ? Theme.of(context).colorScheme.primary : Colors.grey),
-                  ),
-                  title: Text(
-                    sub.fileName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                      fontSize: 13,
+      content: SizedBox(
+        width: 500,
+        height: 400,
+        child: Column(
+          children: [
+            Expanded(
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: _nameControllers.length,
+                itemBuilder: (context, index) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8.0),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: TextField(
+                            controller: _nameControllers[index],
+                            decoration: const InputDecoration(
+                              labelText: 'Tên tiêu chí',
+                              isDense: true,
+                            ),
+                            style: GoogleFonts.inter(fontSize: 13),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 2,
+                          child: TextField(
+                            controller: _scoreControllers[index],
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            decoration: const InputDecoration(
+                              labelText: 'Điểm (Thang 100)',
+                              isDense: true,
+                            ),
+                            style: GoogleFonts.inter(fontSize: 13),
+                            onChanged: (_) => setState(() {}),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+                          onPressed: () => _deleteCriterion(index),
+                        ),
+                      ],
                     ),
-                  ),
-                  onTap: () {
-                    _saveCurrentScores();
-                    setState(() {
-                      currentIndex = index;
-                      _loadSubmission(index);
-                    });
-                  },
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMainContent() {
-    if (currentIndex == -1) return const SizedBox();
-    final sub = submissions[currentIndex];
-
-    return Container(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(
-                sub.fileName,
-                style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.bold, color: const Color(0xFF1E293B)),
-              ),
-              const Spacer(),
-              Text(
-                'Submission ${currentIndex + 1} of ${submissions.length}',
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              const Text("Exam Type:", style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(width: 8),
-              DropdownButton<ExamType>(
-                value: sub.examType,
-                items: defaultExamTypes.map((e) => DropdownMenuItem(value: e, child: Text(e.code))).toList(),
-                onChanged: (val) {
-                  setState(() {
-                    sub.examType = val;
-                  });
+                  );
                 },
               ),
-              const SizedBox(width: 24),
-              ElevatedButton.icon(
-                onPressed: _importDocxRubric,
-                icon: const Icon(Icons.description_rounded, size: 18),
-                label: const Text("Import Rubric Word (.docx)"),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFF1F5F9),
-                  foregroundColor: const Color(0xFF475569),
-                  elevation: 0,
-                ),
-              ),
-              const SizedBox(width: 12),
-              if (sub.examType?.customRubric != null && sub.examType!.customRubric!.isNotEmpty)
-                Row(
-                  children: [
-                    const Icon(Icons.check_circle_rounded, color: Colors.green, size: 18),
-                    const SizedBox(width: 4),
-                    Text(
-                      "Word Rubric Loaded",
-                      style: GoogleFonts.outfit(
-                        color: Colors.green,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13,
-                      ),
+            ),
+            const Divider(),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  TextButton.icon(
+                    onPressed: _addCriterion,
+                    icon: const Icon(Icons.add),
+                    label: const Text('Thêm tiêu chí'),
+                  ),
+                  Text(
+                    'Tổng điểm: ${totalSum.toStringAsFixed(1)}/100',
+                    style: GoogleFonts.inter(
+                      fontWeight: FontWeight.bold,
+                      color: (totalSum - 100.0).abs() < 0.01 ? Colors.green.shade700 : const Color(0xFFE28743),
                     ),
-                  ],
-                )
-              else
-                Row(
-                  children: [
-                    const Icon(Icons.info_outline_rounded, color: Colors.grey, size: 18),
-                    const SizedBox(width: 4),
-                    Text(
-                      "Using Default Rubric",
-                      style: GoogleFonts.outfit(
-                        color: Colors.grey,
-                        fontWeight: FontWeight.normal,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
-                ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Expanded(
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Theme.of(context).dividerColor.withOpacity(0.1)),
-                boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4)),
+                  ),
                 ],
               ),
-              child: SelectableText(
-                sub.content,
-                style: const TextStyle(fontFamily: 'monospace', fontSize: 15, height: 1.5, color: Color(0xFF334155)),
-              ),
             ),
-          ),
-          const SizedBox(height: 24),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              IconButton.filledTonal(
-                onPressed: currentIndex > 0 ? _prevSubmission : null,
-                icon: const Icon(Icons.arrow_back_ios_new_rounded),
-                padding: const EdgeInsets.all(16),
-              ),
-              const SizedBox(width: 32),
-              IconButton.filled(
-                onPressed: currentIndex < submissions.length - 1 ? _nextSubmission : null,
-                icon: const Icon(Icons.arrow_forward_ios_rounded),
-                padding: const EdgeInsets.all(16),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildGradingPanel() {
-    if (currentIndex == -1) return const SizedBox();
-    final sub = submissions[currentIndex];
-    final exam = sub.examType ?? selectedGlobalExamType!;
-
-    return Container(
-      width: 500,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(left: BorderSide(color: Theme.of(context).dividerColor.withOpacity(0.1))),
-      ),
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            color: const Color(0xFFF1F5F9),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text('AI ASSISTANT', style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary)),
-                ),
-                Expanded(
-                  child: Text('HUMAN GRADER', style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.secondary)),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: Row(
-              children: [
-                // AI Panel
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: const BoxDecoration(
-                      border: Border(right: BorderSide(color: Colors.black12)),
-                    ),
-                    child: SingleChildScrollView(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          ElevatedButton.icon(
-                            onPressed: _askAi,
-                            icon: const Icon(Icons.smart_toy),
-                            label: const Text('Grade with AI'),
-                            style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 40)),
-                          ),
-                          const SizedBox(height: 16),
-                          if (sub.hasAiGraded) ...[
-                            _buildAiScore(exam.criteria[0], sub.aiScore1),
-                            _buildAiScore(exam.criteria[1], sub.aiScore2),
-                            _buildAiScore(exam.criteria[2], sub.aiScore3),
-                            const Divider(),
-                            const Text('AI Comment:', style: TextStyle(fontWeight: FontWeight.bold)),
-                            const SizedBox(height: 4),
-                            Text(sub.aiComment, style: const TextStyle(fontSize: 13)),
-                            const SizedBox(height: 16),
-                            ElevatedButton.icon(
-                              onPressed: _copyAiToTeacher,
-                              icon: const Icon(Icons.copy),
-                              label: const Text('Trust & Copy'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.green.shade50,
-                                foregroundColor: Colors.green.shade700,
-                                minimumSize: const Size(double.infinity, 40),
-                              ),
-                            )
-                          ] else
-                            const Padding(
-                              padding: EdgeInsets.only(top: 32.0),
-                              child: Center(child: Text('No AI suggestions yet.', style: TextStyle(color: Colors.grey))),
-                            )
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                // Human Panel
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    child: SingleChildScrollView(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildScoreField(exam.criteria[0], _score1Controller),
-                          const SizedBox(height: 12),
-                          _buildScoreField(exam.criteria[1], _score2Controller),
-                          const SizedBox(height: 12),
-                          _buildScoreField(exam.criteria[2], _score3Controller),
-                          const Divider(height: 32),
-                          _buildCommentField(),
-                          const SizedBox(height: 16),
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.secondaryContainer,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text('TOTAL', style: TextStyle(fontWeight: FontWeight.bold)),
-                                Builder(
-                                  builder: (context) {
-                                    double t = (double.tryParse(_score1Controller.text) ?? 0) +
-                                               (double.tryParse(_score2Controller.text) ?? 0) +
-                                               (double.tryParse(_score3Controller.text) ?? 0);
-                                    return Text(
-                                      t.toStringAsFixed(1),
-                                      style: GoogleFonts.outfit(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold,
-                                        color: Theme.of(context).colorScheme.onSecondaryContainer,
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton(
-                              onPressed: () {
-                                _saveCurrentScores();
-                                if (currentIndex < submissions.length - 1) {
-                                  _nextSubmission();
-                                }
-                              },
-                              style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
-                              child: Text(currentIndex < submissions.length - 1 ? 'Save & Next' : 'Finish Grading'),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAiScore(String label, double score) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-          const SizedBox(height: 4),
-          Text(score.toString(), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildScoreField(String label, TextEditingController controller) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Color(0xFF475569))),
-        const SizedBox(height: 6),
-        TextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          decoration: InputDecoration(
-            isDense: true,
-            filled: true,
-            fillColor: const Color(0xFFF8FAFC),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-          ),
-          onChanged: (_) => setState(() {}),
+          ],
         ),
-      ],
-    );
-  }
-
-  Widget _buildCommentField() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('Comment', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Color(0xFF475569))),
-        const SizedBox(height: 6),
-        TextField(
-          controller: _commentController,
-          maxLines: 4,
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: const Color(0xFFF8FAFC),
-            hintText: 'Enter feedback...',
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Hủy'),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            // Save criteria
+            final newCriteria = <Criterion>[];
+            for (int i = 0; i < _nameControllers.length; i++) {
+              final name = _nameControllers[i].text.trim();
+              final score = double.tryParse(_scoreControllers[i].text) ?? 10.0;
+              newCriteria.add(Criterion(name.isNotEmpty ? name : 'Question ${i + 1}', score));
+            }
+            Navigator.pop(context, newCriteria);
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF6366F1),
+            foregroundColor: Colors.white,
           ),
+          child: const Text('Lưu thay đổi'),
         ),
       ],
     );

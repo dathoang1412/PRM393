@@ -49,13 +49,15 @@ Although the original rubric might be out of 100 points, you MUST evaluate and r
 Here are the criteria and their max scores on a 10-point scale:
 ${exam.criteria.asMap().entries.map((e) => '- ${e.value.name}: Max ${e.value.maxScore10} points').join('\n')}
 
+For the overall comment, you MUST write a neat, concise, and clear evaluation in Vietnamese for each individual question (e.g., 'Câu 1: ... | Câu 2: ...'). Keep the commentary brief and professional.
+
 Submission content:
 ${sub.content}
 
 Return ONLY valid JSON (no markdown block, just the json object):
 {
   ${jsonFields.entries.map((e) => '${e.key}: ${e.value}').join(',\n  ')},
-  "comment": "<string detailed comment explaining your score based on the rubric>"
+  "comment": "<Nhận xét tiếng Việt súc tích cho từng câu, tránh dài dòng lan man>"
 }
 ''';
 

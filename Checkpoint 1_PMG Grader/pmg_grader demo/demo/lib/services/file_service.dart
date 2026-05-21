@@ -34,6 +34,29 @@ class FileService {
     return null;
   }
 
+  Future<String?> extractZipFromPath(String zipFilePath) async {
+    try {
+      final bytes = File(zipFilePath).readAsBytesSync();
+      final archive = ZipDecoder().decodeBytes(bytes);
+
+      final appData = await getApplicationSupportDirectory();
+      final extractPath = p.join(appData.path, 'PMG_Grader_Data', 'Extracted_${DateTime.now().millisecondsSinceEpoch}');
+
+      for (final file in archive) {
+        final filename = file.name;
+        if (file.isFile && filename.endsWith('.txt')) {
+          final data = file.content as List<int>;
+          final outFile = File(p.join(extractPath, filename));
+          outFile.createSync(recursive: true);
+          outFile.writeAsBytesSync(data);
+        }
+      }
+      return extractPath;
+    } catch (e) {
+      return null;
+    }
+  }
+
   List<Submission> loadSubmissionsFromFolder(String path) {
     final dir = Directory(path);
     final files = dir.listSync(recursive: true).where((file) => p.extension(file.path) == '.txt').toList();

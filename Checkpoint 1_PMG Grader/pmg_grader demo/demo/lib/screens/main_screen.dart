@@ -6,13 +6,15 @@ import '../models/exam_type.dart';
 import '../services/file_service.dart';
 import '../services/gemini_service.dart';
 import '../services/grading_export_service.dart';
+import '../services/session_service.dart';
 import '../widgets/app_bar_widget.dart';
 import '../widgets/sidebar_widget.dart';
 import '../widgets/content_viewer_widget.dart';
 import '../widgets/grading_panel_widget.dart';
 
 class MainGradingScreen extends StatefulWidget {
-  const MainGradingScreen({super.key});
+  final GradingSession session;
+  const MainGradingScreen({super.key, required this.session});
 
   @override
   State<MainGradingScreen> createState() => _MainGradingScreenState();
@@ -39,6 +41,14 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
     super.initState();
     selectedGlobalExamType = defaultExamTypes.first;
     _loadApiKey();
+    // Pre-fill marker name from session if available
+    if (widget.session.markerName != null && widget.session.markerName!.isNotEmpty) {
+      _markerController.text = widget.session.markerName!;
+    }
+    // Auto-load zip if session already has one
+    if (widget.session.studentZipPath != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _loadZipFromSession());
+    }
   }
 
   Future<void> _loadApiKey() async {
@@ -63,6 +73,28 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
 
   void _showSnackBar(String msg) {
     if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  Future<void> _loadZipFromSession() async {
+    if (widget.session.studentZipPath == null) return;
+    setState(() => isLoading = true);
+    try {
+      final extractPath = await _fileService.extractZipFromPath(widget.session.studentZipPath!);
+      if (extractPath != null) {
+        final loadedSubmissions = _fileService.loadSubmissionsFromFolder(extractPath);
+        setState(() {
+          submissions = loadedSubmissions;
+          if (submissions.isNotEmpty) {
+            currentIndex = 0;
+            _loadSubmission(0);
+          }
+        });
+      }
+    } catch (e) {
+      _showSnackBar('Error loading zip: $e');
+    } finally {
+      setState(() => isLoading = false);
+    }
   }
 
   Future<void> _pickZipAndExtract() async {

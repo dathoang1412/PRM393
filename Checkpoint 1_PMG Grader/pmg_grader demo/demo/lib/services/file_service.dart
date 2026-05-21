@@ -76,6 +76,82 @@ class FileService {
     return loadedSubmissions;
   }
 
+  Future<String?> extractDocxTextFromPath(String path) async {
+    try {
+      final bytes = File(path).readAsBytesSync();
+      final archive = ZipDecoder().decodeBytes(bytes);
+      
+      final docFile = archive.firstWhere(
+        (file) => file.name == 'word/document.xml',
+        orElse: () => throw Exception('Invalid DOCX format: word/document.xml not found'),
+      );
+      
+      final xmlContent = utf8.decode(docFile.content as List<int>);
+      
+      final buffer = StringBuffer();
+      final regExp = RegExp(r'<[^>]+>|[^<]+');
+      final matches = regExp.allMatches(xmlContent);
+      
+      bool inText = false;
+      
+      for (final match in matches) {
+        final token = match.group(0)!;
+        if (token.startsWith('<')) {
+          final tagName = token.toLowerCase();
+          if (tagName == '<w:t>' || tagName.startsWith('<w:t ')) {
+            inText = true;
+          } else if (tagName == '</w:t>') {
+            inText = false;
+          } else if (tagName == '<w:p>' || tagName.startsWith('<w:p ')) {
+            // New paragraph, ensure a newline
+            final current = buffer.toString();
+            if (current.isNotEmpty && !current.endsWith('\n')) {
+              buffer.write('\n');
+            }
+          } else if (tagName == '<w:tr>' || tagName.startsWith('<w:tr ')) {
+            // Table row separator
+            final current = buffer.toString();
+            if (current.isNotEmpty && !current.endsWith('\n')) {
+              buffer.write('\n');
+            }
+          } else if (tagName == '<w:tc>' || tagName.startsWith('<w:tc ')) {
+            // Table column cell separator
+            buffer.write('\t');
+          } else if (tagName.contains('w:br')) {
+            buffer.write('\n');
+          } else if (tagName.contains('w:tab')) {
+            buffer.write('\t');
+          }
+        } else {
+          if (inText) {
+            buffer.write(token);
+          }
+        }
+      }
+      
+      String text = buffer.toString()
+          .replaceAll('&lt;', '<')
+          .replaceAll('&gt;', '>')
+          .replaceAll('&amp;', '&')
+          .replaceAll('&quot;', '"')
+          .replaceAll('&apos;', "'");
+          
+      // Clean up whitespace and collapse multiple empty lines
+      final lines = text.split('\n');
+      final cleanLines = <String>[];
+      for (var line in lines) {
+        final trimmed = line.trim();
+        if (trimmed.isNotEmpty) {
+          cleanLines.add(trimmed);
+        }
+      }
+      
+      return cleanLines.join('\n');
+    } catch (e) {
+      throw Exception("Failed to parse Word document: $e");
+    }
+  }
+
   Future<String?> pickAndParseDocx() async {
     FilePickerResult? result = await FilePicker.pickFiles(
       type: FileType.custom,
@@ -83,35 +159,7 @@ class FileService {
     );
 
     if (result != null && result.files.single.path != null) {
-      try {
-        final bytes = File(result.files.single.path!).readAsBytesSync();
-        final archive = ZipDecoder().decodeBytes(bytes);
-        
-        final docFile = archive.firstWhere(
-          (file) => file.name == 'word/document.xml',
-          orElse: () => throw Exception('Invalid DOCX format: word/document.xml not found'),
-        );
-        
-        final xmlContent = utf8.decode(docFile.content as List<int>);
-        
-        final regExp = RegExp(r'<w:t[^>]*>(.*?)</w:t>');
-        final matches = regExp.allMatches(xmlContent);
-        
-        final buffer = StringBuffer();
-        for (final match in matches) {
-          buffer.write(match.group(1));
-          buffer.write(' '); // separate words/sentences slightly
-        }
-        
-        return buffer.toString()
-            .replaceAll('&lt;', '<')
-            .replaceAll('&gt;', '>')
-            .replaceAll('&amp;', '&')
-            .replaceAll('&quot;', '"')
-            .replaceAll('&apos;', "'");
-      } catch (e) {
-        throw Exception("Failed to parse Word document: $e");
-      }
+      return extractDocxTextFromPath(result.files.single.path!);
     }
     return null;
   }

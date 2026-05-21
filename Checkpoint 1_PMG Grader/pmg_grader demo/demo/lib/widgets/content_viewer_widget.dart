@@ -8,7 +8,6 @@ class ContentViewerWidget extends StatelessWidget {
   final int currentIndex;
   final int totalSubmissions;
   final ValueChanged<ExamType?> onExamTypeChanged;
-  final VoidCallback onImportDocxRubric;
   final VoidCallback onConfigureCriteria;
   final VoidCallback? onPrev;
   final VoidCallback? onNext;
@@ -19,7 +18,6 @@ class ContentViewerWidget extends StatelessWidget {
     required this.currentIndex,
     required this.totalSubmissions,
     required this.onExamTypeChanged,
-    required this.onImportDocxRubric,
     required this.onConfigureCriteria,
     required this.onPrev,
     required this.onNext,
@@ -122,20 +120,6 @@ class ContentViewerWidget extends StatelessWidget {
                   runSpacing: 8,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    ElevatedButton.icon(
-                      onPressed: onImportDocxRubric,
-                      icon: const Icon(Icons.description_rounded, size: 16),
-                      label: const Text("Nhập Rubric Word (.docx)"),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFF1F5F9),
-                        foregroundColor: const Color(0xFF475569),
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                    ),
                     if (hasCustomRubric)
                       Row(
                         mainAxisSize: MainAxisSize.min,
@@ -143,7 +127,7 @@ class ContentViewerWidget extends StatelessWidget {
                           const Icon(Icons.check_circle_rounded, color: Colors.green, size: 18),
                           const SizedBox(width: 4),
                           Text(
-                            "Đã nạp Word Rubric",
+                            "Đã nạp Word Rubric từ phiên",
                             style: GoogleFonts.inter(
                               color: Colors.green.shade700,
                               fontWeight: FontWeight.w600,

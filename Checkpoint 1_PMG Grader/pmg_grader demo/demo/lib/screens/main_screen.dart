@@ -53,6 +53,35 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
     if (widget.session.studentZipPath != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _loadZipFromSession());
     }
+    // Auto-load rubric docx if session has one
+    if (widget.session.gradingGuideDocPath != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _loadRubricFromSession());
+    }
+  }
+
+  Future<void> _loadRubricFromSession() async {
+    if (widget.session.gradingGuideDocPath == null) return;
+    setState(() => isLoading = true);
+    try {
+      final rubricText = await _fileService.extractDocxTextFromPath(widget.session.gradingGuideDocPath!);
+      if (rubricText != null) {
+        setState(() {
+          if (selectedGlobalExamType != null) {
+            selectedGlobalExamType!.customRubric = rubricText;
+          }
+          // Sync with any loaded submissions
+          for (var sub in submissions) {
+            if (sub.examType != null) {
+              sub.examType!.customRubric = rubricText;
+            }
+          }
+        });
+      }
+    } catch (e) {
+      _showSnackBar("Không thể tự động tải rubric: $e");
+    } finally {
+      setState(() => isLoading = false);
+    }
   }
 
   Future<void> _updateAndSaveSession() async {
@@ -267,29 +296,19 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
     }
   }
 
-  Future<void> _importDocxRubric() async {
-    if (currentIndex == -1) return;
-    final sub = submissions[currentIndex];
-    final exam = sub.examType ?? selectedGlobalExamType;
-    if (exam == null) {
-      _showSnackBar("Vui lòng chọn đề thi trước.");
-      return;
-    }
-
-    setState(() => isLoading = true);
-    try {
-      final rubricText = await _fileService.pickAndParseDocx();
-      if (rubricText != null) {
-        setState(() {
-          exam.customRubric = rubricText;
-          _showSnackBar("Nạp Word Rubric thành công cho ${exam.code}!");
-        });
+  void _onRubricChanged(String newRubric) {
+    setState(() {
+      if (selectedGlobalExamType != null) {
+        selectedGlobalExamType!.customRubric = newRubric;
       }
-    } catch (e) {
-      _showSnackBar("Lỗi khi nhập Word Rubric: $e");
-    } finally {
-      setState(() => isLoading = false);
-    }
+      if (currentIndex != -1) {
+        final sub = submissions[currentIndex];
+        final exam = sub.examType ?? selectedGlobalExamType;
+        if (exam != null) {
+          exam.customRubric = newRubric;
+        }
+      }
+    });
   }
 
   Future<void> _showConfigureCriteriaDialog(ExamType exam) async {
@@ -389,7 +408,6 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
                                   _loadSubmission(currentIndex); // reload controllers for new type
                                 });
                               },
-                              onImportDocxRubric: _importDocxRubric,
                               onConfigureCriteria: () => _showConfigureCriteriaDialog(submissions[currentIndex].examType ?? selectedGlobalExamType ?? defaultExamTypes.first),
                               onPrev: currentIndex > 0 ? _prevSubmission : null,
                               onNext: currentIndex < submissions.length - 1 ? _nextSubmission : null,
@@ -410,6 +428,7 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
                             scoreControllers: _scoreControllers,
                             commentController: _commentController,
                             hasNext: currentIndex < submissions.length - 1,
+                            onRubricChanged: _onRubricChanged,
                           ),
                         ],
                       ),

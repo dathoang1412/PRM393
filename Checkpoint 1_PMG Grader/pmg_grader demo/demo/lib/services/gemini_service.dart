@@ -62,7 +62,7 @@ Return ONLY valid JSON (no markdown block, just the json object):
 ''';
 
     final response = await http.post(
-      Uri.parse('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey'),
+      Uri.parse('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$apiKey'),
       headers: {
         'Content-Type': 'application/json',
       },

@@ -451,17 +451,7 @@ class _GradingPanelWidgetState extends State<GradingPanelWidget> {
               scoreVal,
               c.maxScore10,
               commentVal,
-              () {
-                if (commentVal.isNotEmpty) {
-                  Clipboard.setData(ClipboardData(text: commentVal));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Đã sao chép nhận xét: "${c.name}"'),
-                      duration: const Duration(seconds: 1),
-                    ),
-                  );
-                }
-              },
+              'Đã sao chép nhận xét: "${c.name}"',
             );
           }),
           const Divider(height: 32),
@@ -605,7 +595,7 @@ class _GradingPanelWidgetState extends State<GradingPanelWidget> {
     );
   }
 
-  Widget _buildAiScoreRow(String label, double score, double maxScore, String comment, VoidCallback onCopy) {
+  Widget _buildAiScoreRow(String label, double score, double maxScore, String comment, String successMessage) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Column(
@@ -660,28 +650,9 @@ class _GradingPanelWidgetState extends State<GradingPanelWidget> {
                 ),
               ),
               const SizedBox(width: 8),
-              Tooltip(
-                message: 'Sao chép nhận xét',
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(8),
-                    onTap: onCopy,
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF1F5F9),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: const Color(0xFFE2E8F0)),
-                      ),
-                      child: const Icon(
-                        Icons.copy_rounded,
-                        size: 16,
-                        color: Color(0xFF475569),
-                      ),
-                    ),
-                  ),
-                ),
+              CopyCommentButton(
+                textToCopy: comment,
+                successMessage: successMessage,
               ),
             ],
           ),
@@ -768,6 +739,92 @@ class _GradingPanelWidgetState extends State<GradingPanelWidget> {
           style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF1E293B)),
         ),
       ],
+    );
+  }
+}
+
+class CopyCommentButton extends StatefulWidget {
+  final String textToCopy;
+  final String successMessage;
+
+  const CopyCommentButton({
+    super.key,
+    required this.textToCopy,
+    required this.successMessage,
+  });
+
+  @override
+  State<CopyCommentButton> createState() => _CopyCommentButtonState();
+}
+
+class _CopyCommentButtonState extends State<CopyCommentButton> {
+  bool _copied = false;
+
+  void _handleCopy() {
+    if (widget.textToCopy.isEmpty) return;
+    Clipboard.setData(ClipboardData(text: widget.textToCopy));
+    
+    setState(() {
+      _copied = true;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                widget.successMessage,
+                style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w500),
+              ),
+            ),
+          ],
+        ),
+        duration: const Duration(seconds: 1),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        backgroundColor: const Color(0xFF10B981), // emerald success color
+      ),
+    );
+
+    Future.delayed(const Duration(seconds: 1), () {
+      if (mounted) {
+        setState(() {
+          _copied = false;
+        });
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: _copied ? 'Đã sao chép!' : 'Sao chép nhận xét',
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: widget.textToCopy.isNotEmpty ? _handleCopy : null,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: _copied ? const Color(0xFFD1FAE5) : const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: _copied ? const Color(0xFF34D399) : const Color(0xFFE2E8F0),
+              ),
+            ),
+            child: Icon(
+              _copied ? Icons.check_rounded : Icons.copy_rounded,
+              size: 16,
+              color: _copied ? const Color(0xFF059669) : const Color(0xFF475569),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

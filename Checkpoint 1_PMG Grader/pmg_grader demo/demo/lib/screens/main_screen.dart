@@ -36,11 +36,17 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
   final TextEditingController _markerController = TextEditingController(text: ""); // empty by default for validation
 
   ExamType? selectedGlobalExamType;
+  final List<ExamType> sessionExamTypes = [];
 
   @override
   void initState() {
     super.initState();
-    selectedGlobalExamType = defaultExamTypes.first;
+    sessionExamTypes.addAll(defaultExamTypes.map((e) => ExamType(
+      e.code,
+      e.criteria.map((c) => Criterion(c.name, c.maxScore100)).toList(),
+      customRubric: e.customRubric,
+    )));
+    selectedGlobalExamType = sessionExamTypes.first;
     _loadApiKey();
     // Pre-fill marker name from session if available
     if (widget.session.markerName != null && widget.session.markerName!.isNotEmpty) {
@@ -49,36 +55,108 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
     _markerController.addListener(() {
       _updateAndSaveSession();
     });
-    // Auto-load zip if session already has one
-    if (widget.session.studentZipPath != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _loadZipFromSession());
-    }
-    // Auto-load rubric docx if session has one
-    if (widget.session.gradingGuideDocPath != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _loadRubricFromSession());
-    }
+    // Start session initialization asynchronously
+    WidgetsBinding.instance.addPostFrameCallback((_) => _initializeSession());
   }
 
-  Future<void> _loadRubricFromSession() async {
-    if (widget.session.gradingGuideDocPath == null) return;
+  Future<void> _initializeSession() async {
     setState(() => isLoading = true);
     try {
-      final rubricText = await _fileService.extractDocxTextFromPath(widget.session.gradingGuideDocPath!);
-      if (rubricText != null) {
-        setState(() {
-          if (selectedGlobalExamType != null) {
-            selectedGlobalExamType!.customRubric = rubricText;
-          }
-          // Sync with any loaded submissions
-          for (var sub in submissions) {
-            if (sub.examType != null) {
-              sub.examType!.customRubric = rubricText;
+      // 1. Load progress file if exists
+      final progress = await _sessionService.loadSessionProgress(widget.session.id);
+
+      // 2. Restore custom rubrics and criteria from progress
+      if (progress != null) {
+        final customRubrics = progress['customRubrics'] as Map<String, dynamic>?;
+        if (customRubrics != null) {
+          customRubrics.forEach((code, rubric) {
+            final exam = sessionExamTypes.firstWhere((e) => e.code == code, orElse: () => sessionExamTypes.first);
+            exam.customRubric = rubric as String?;
+          });
+        }
+
+        final customCriteria = progress['customCriteria'] as Map<String, dynamic>?;
+        if (customCriteria != null) {
+          customCriteria.forEach((code, criteriaList) {
+            final exam = sessionExamTypes.firstWhere((e) => e.code == code, orElse: () => sessionExamTypes.first);
+            if (criteriaList is List) {
+              exam.criteria = criteriaList.map((c) {
+                final map = c as Map<String, dynamic>;
+                return Criterion(map['name'] as String, (map['maxScore100'] as num).toDouble());
+              }).toList();
+            }
+          });
+        }
+
+        final selectedCode = progress['selectedGlobalExamTypeCode'] as String?;
+        if (selectedCode != null) {
+          selectedGlobalExamType = sessionExamTypes.firstWhere((e) => e.code == selectedCode, orElse: () => sessionExamTypes.first);
+        }
+      }
+
+      // 3. Load Zip and Student Submissions
+      if (widget.session.studentZipPath != null) {
+        final extractPath = await _fileService.extractZipFromPath(widget.session.studentZipPath!, widget.session.id);
+        if (extractPath != null) {
+          final loadedSubmissions = _fileService.loadSubmissionsFromFolder(extractPath);
+          
+          // 4. Map progress to loaded submissions
+          if (progress != null && progress['submissions'] != null) {
+            final savedSubs = progress['submissions'] as List<dynamic>;
+            for (var sub in loadedSubmissions) {
+              final match = savedSubs.firstWhere(
+                (s) => s['fileName'] == sub.fileName,
+                orElse: () => null,
+              );
+              if (match != null) {
+                sub.scores = (match['scores'] as List<dynamic>).map((e) => (e as num).toDouble()).toList();
+                sub.comment = match['comment'] as String? ?? "";
+                sub.aiScores = (match['aiScores'] as List<dynamic>).map((e) => (e as num).toDouble()).toList();
+                sub.aiComments = (match['aiComments'] as List<dynamic>).map((e) => e.toString()).toList();
+                sub.aiComment = match['aiComment'] as String? ?? "";
+                sub.hasAiGraded = match['hasAiGraded'] as bool? ?? false;
+                sub.graded = match['graded'] as bool? ?? false;
+                final subExamTypeCode = match['examTypeCode'] as String?;
+                if (subExamTypeCode != null) {
+                  sub.examType = sessionExamTypes.firstWhere((e) => e.code == subExamTypeCode, orElse: () => selectedGlobalExamType ?? sessionExamTypes.first);
+                }
+              }
             }
           }
-        });
+
+          setState(() {
+            submissions = loadedSubmissions;
+            int savedIndex = progress?['currentIndex'] as int? ?? 0;
+            if (savedIndex >= 0 && savedIndex < submissions.length) {
+              currentIndex = savedIndex;
+            } else if (submissions.isNotEmpty) {
+              currentIndex = 0;
+            }
+            if (currentIndex != -1) {
+              _loadSubmission(currentIndex);
+            }
+          });
+        }
+      }
+
+      // 5. Load Rubric Docx if any
+      if (widget.session.gradingGuideDocPath != null && (selectedGlobalExamType?.customRubric == null || selectedGlobalExamType!.customRubric!.isEmpty)) {
+        final rubricText = await _fileService.extractDocxTextFromPath(widget.session.gradingGuideDocPath!);
+        if (rubricText != null) {
+          setState(() {
+            if (selectedGlobalExamType != null) {
+              selectedGlobalExamType!.customRubric = rubricText;
+            }
+            for (var sub in submissions) {
+              if (sub.examType != null) {
+                sub.examType!.customRubric = rubricText;
+              }
+            }
+          });
+        }
       }
     } catch (e) {
-      _showSnackBar("Không thể tự động tải rubric: $e");
+      _showSnackBar("Lỗi khi khôi phục tiến trình: $e");
     } finally {
       setState(() => isLoading = false);
     }
@@ -97,6 +175,36 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
     );
 
     await _sessionService.saveSession(updatedSession);
+
+    // Save detailed progress to JSON file
+    final progressData = {
+      'currentIndex': currentIndex,
+      'selectedGlobalExamTypeCode': selectedGlobalExamType?.code,
+      'customRubrics': {
+        for (var exam in sessionExamTypes)
+          if (exam.customRubric != null) exam.code: exam.customRubric
+      },
+      'customCriteria': {
+        for (var exam in sessionExamTypes)
+          exam.code: exam.criteria.map((c) => {
+            'name': c.name,
+            'maxScore100': c.maxScore100,
+          }).toList()
+      },
+      'submissions': submissions.map((sub) => {
+        'fileName': sub.fileName,
+        'scores': sub.scores,
+        'comment': sub.comment,
+        'aiScores': sub.aiScores,
+        'aiComments': sub.aiComments,
+        'aiComment': sub.aiComment,
+        'hasAiGraded': sub.hasAiGraded,
+        'graded': sub.graded,
+        'examTypeCode': sub.examType?.code,
+      }).toList(),
+    };
+
+    await _sessionService.saveSessionProgress(widget.session.id, progressData);
   }
 
   Future<void> _loadApiKey() async {
@@ -123,33 +231,10 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
     if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
-  Future<void> _loadZipFromSession() async {
-    if (widget.session.studentZipPath == null) return;
-    setState(() => isLoading = true);
-    try {
-      final extractPath = await _fileService.extractZipFromPath(widget.session.studentZipPath!);
-      if (extractPath != null) {
-        final loadedSubmissions = _fileService.loadSubmissionsFromFolder(extractPath);
-        setState(() {
-          submissions = loadedSubmissions;
-          if (submissions.isNotEmpty) {
-            currentIndex = 0;
-            _loadSubmission(0);
-          }
-        });
-        _updateAndSaveSession();
-      }
-    } catch (e) {
-      _showSnackBar('Error loading zip: $e');
-    } finally {
-      setState(() => isLoading = false);
-    }
-  }
-
   Future<void> _pickZipAndExtract() async {
     setState(() => isLoading = true);
     try {
-      final extractPath = await _fileService.pickAndExtractZip();
+      final extractPath = await _fileService.pickAndExtractZip(widget.session.id);
       if (extractPath != null) {
         final loadedSubmissions = _fileService.loadSubmissionsFromFolder(extractPath);
         setState(() {
@@ -309,6 +394,7 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
         }
       }
     });
+    _updateAndSaveSession();
   }
 
   Future<void> _showConfigureCriteriaDialog(ExamType exam) async {
@@ -330,6 +416,7 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
         _loadSubmission(currentIndex);
         _showSnackBar("Cập nhật tiêu chí đề thi thành công!");
       });
+      _updateAndSaveSession();
     }
   }
 
@@ -407,10 +494,12 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
                                   submissions[currentIndex].examType = val;
                                   _loadSubmission(currentIndex); // reload controllers for new type
                                 });
+                                _updateAndSaveSession();
                               },
-                              onConfigureCriteria: () => _showConfigureCriteriaDialog(submissions[currentIndex].examType ?? selectedGlobalExamType ?? defaultExamTypes.first),
+                              onConfigureCriteria: () => _showConfigureCriteriaDialog(submissions[currentIndex].examType ?? selectedGlobalExamType ?? sessionExamTypes.first),
                               onPrev: currentIndex > 0 ? _prevSubmission : null,
                               onNext: currentIndex < submissions.length - 1 ? _nextSubmission : null,
+                              examTypes: sessionExamTypes,
                             ),
                           ),
                           GradingPanelWidget(

@@ -316,7 +316,7 @@ class _SessionCardState extends State<_SessionCard> {
                         children: [
                           Icon(Icons.person_outline_rounded, size: 13, color: _kTextSecondary),
                           const SizedBox(width: 4),
-                          Text(s.markerName ?? 'Chưa xác định',
+                          Text('Người chấm: ${s.markerName ?? "Chưa xác định"}',
                               style: GoogleFonts.inter(fontSize: 12, color: _kTextSecondary)),
                           const SizedBox(width: 16),
                           Icon(Icons.access_time_rounded, size: 13, color: _kTextSecondary),

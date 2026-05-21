@@ -1,5 +1,8 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 
 class GradingSession {
   final String id;
@@ -138,6 +141,49 @@ class SessionService {
     sessions.removeWhere((s) => s.id == id);
     await prefs.setString(
         _sessionsKey, jsonEncode(sessions.map((s) => s.toJson()).toList()));
+    await deleteSessionProgress(id);
+  }
+
+  Future<Map<String, dynamic>?> loadSessionProgress(String sessionId) async {
+    try {
+      final appData = await getApplicationSupportDirectory();
+      final file = File(p.join(appData.path, 'PMG_Grader_Data', 'session_${sessionId}_progress.json'));
+      if (await file.exists()) {
+        final content = await file.readAsString();
+        return jsonDecode(content) as Map<String, dynamic>;
+      }
+    } catch (e) {
+      // Ignore
+    }
+    return null;
+  }
+
+  Future<void> saveSessionProgress(String sessionId, Map<String, dynamic> data) async {
+    try {
+      final appData = await getApplicationSupportDirectory();
+      final file = File(p.join(appData.path, 'PMG_Grader_Data', 'session_${sessionId}_progress.json'));
+      await file.create(recursive: true);
+      await file.writeAsString(jsonEncode(data));
+    } catch (e) {
+      // Ignore
+    }
+  }
+
+  Future<void> deleteSessionProgress(String sessionId) async {
+    try {
+      final appData = await getApplicationSupportDirectory();
+      final file = File(p.join(appData.path, 'PMG_Grader_Data', 'session_${sessionId}_progress.json'));
+      if (await file.exists()) {
+        await file.delete();
+      }
+      // Also delete extracted zip folder to save disk space
+      final extractDir = Directory(p.join(appData.path, 'PMG_Grader_Data', 'Extracted_$sessionId'));
+      if (await extractDir.exists()) {
+        await extractDir.delete(recursive: true);
+      }
+    } catch (e) {
+      // Ignore
+    }
   }
 
   GradingSession createNewSession() {

@@ -11,6 +11,7 @@ class ContentViewerWidget extends StatelessWidget {
   final VoidCallback onConfigureCriteria;
   final VoidCallback? onPrev;
   final VoidCallback? onNext;
+  final List<ExamType> examTypes;
 
   const ContentViewerWidget({
     super.key,
@@ -21,6 +22,7 @@ class ContentViewerWidget extends StatelessWidget {
     required this.onConfigureCriteria,
     required this.onPrev,
     required this.onNext,
+    required this.examTypes,
   });
 
   @override
@@ -95,7 +97,7 @@ class ContentViewerWidget extends StatelessWidget {
                     DropdownButtonHideUnderline(
                       child: DropdownButton<ExamType>(
                         value: exam,
-                        items: defaultExamTypes
+                        items: examTypes
                             .map((e) => DropdownMenuItem(value: e, child: Text('Mã đề ${e.code}')))
                             .toList(),
                         onChanged: onExamTypeChanged,

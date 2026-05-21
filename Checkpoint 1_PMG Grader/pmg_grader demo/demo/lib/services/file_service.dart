@@ -8,7 +8,7 @@ import 'package:excel/excel.dart' as excel_pkg;
 import '../models/submission.dart';
 
 class FileService {
-  Future<String?> pickAndExtractZip() async {
+  Future<String?> pickAndExtractZip(String sessionId) async {
     FilePickerResult? result = await FilePicker.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['zip'],
@@ -19,7 +19,13 @@ class FileService {
       final archive = ZipDecoder().decodeBytes(bytes);
       
       final appData = await getApplicationSupportDirectory();
-      final extractPath = p.join(appData.path, 'PMG_Grader_Data', 'Extracted_${DateTime.now().millisecondsSinceEpoch}');
+      final extractPath = p.join(appData.path, 'PMG_Grader_Data', 'Extracted_$sessionId');
+      
+      // Clean existing directory first if they are re-uploading
+      final dir = Directory(extractPath);
+      if (dir.existsSync()) {
+        dir.deleteSync(recursive: true);
+      }
       
       for (final file in archive) {
         final filename = file.name;
@@ -35,13 +41,22 @@ class FileService {
     return null;
   }
 
-  Future<String?> extractZipFromPath(String zipFilePath) async {
+  Future<String?> extractZipFromPath(String zipFilePath, String sessionId) async {
     try {
+      final appData = await getApplicationSupportDirectory();
+      final extractPath = p.join(appData.path, 'PMG_Grader_Data', 'Extracted_$sessionId');
+
+      // Check if folder already exists and has text files. If so, just return it without re-extracting!
+      final dir = Directory(extractPath);
+      if (dir.existsSync()) {
+        final files = dir.listSync(recursive: true).where((file) => p.extension(file.path) == '.txt').toList();
+        if (files.isNotEmpty) {
+          return extractPath;
+        }
+      }
+
       final bytes = File(zipFilePath).readAsBytesSync();
       final archive = ZipDecoder().decodeBytes(bytes);
-
-      final appData = await getApplicationSupportDirectory();
-      final extractPath = p.join(appData.path, 'PMG_Grader_Data', 'Extracted_${DateTime.now().millisecondsSinceEpoch}');
 
       for (final file in archive) {
         final filename = file.name;

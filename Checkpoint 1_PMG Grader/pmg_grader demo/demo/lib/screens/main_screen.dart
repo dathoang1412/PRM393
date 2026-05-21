@@ -24,6 +24,7 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
   final FileService _fileService = FileService();
   final GeminiService _geminiService = GeminiService();
   final GradingExportService _exportService = GradingExportService();
+  final SessionService _sessionService = SessionService();
 
   List<Submission> submissions = [];
   int currentIndex = -1;
@@ -45,10 +46,28 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
     if (widget.session.markerName != null && widget.session.markerName!.isNotEmpty) {
       _markerController.text = widget.session.markerName!;
     }
+    _markerController.addListener(() {
+      _updateAndSaveSession();
+    });
     // Auto-load zip if session already has one
     if (widget.session.studentZipPath != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _loadZipFromSession());
     }
+  }
+
+  Future<void> _updateAndSaveSession() async {
+    final gradedCount = submissions.where((s) => s.graded).length;
+    final totalStudents = submissions.length;
+    final markerName = _markerController.text.trim();
+
+    final updatedSession = widget.session.copyWith(
+      gradedCount: gradedCount,
+      totalStudents: totalStudents,
+      markerName: markerName.isNotEmpty ? markerName : null,
+      lastModified: DateTime.now(),
+    );
+
+    await _sessionService.saveSession(updatedSession);
   }
 
   Future<void> _loadApiKey() async {
@@ -89,6 +108,7 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
             _loadSubmission(0);
           }
         });
+        _updateAndSaveSession();
       }
     } catch (e) {
       _showSnackBar('Error loading zip: $e');
@@ -110,6 +130,7 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
             _loadSubmission(0);
           }
         });
+        _updateAndSaveSession();
       }
     } catch (e) {
       _showSnackBar('Error loading zip: $e');
@@ -162,6 +183,7 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
     }
     sub.comment = _commentController.text;
     sub.graded = true;
+    _updateAndSaveSession();
   }
 
   void _nextSubmission() {

@@ -39,16 +39,22 @@ class AppBarWidget extends StatelessWidget {
       ),
       child: Row(
         children: [
+          IconButton(
+            icon: const Icon(Icons.arrow_back_rounded, size: 24, color: Color(0xFF475569)),
+            onPressed: () => Navigator.of(context).pop(),
+            tooltip: 'Quay lại',
+          ),
+          const SizedBox(width: 8),
           const Icon(
             Icons.auto_stories_rounded,
-            size: 32,
+            size: 28,
             color: Color(0xFF6366F1),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
           Text(
             'PMG GRADER',
             style: GoogleFonts.outfit(
-              fontSize: 22,
+              fontSize: 20,
               fontWeight: FontWeight.bold,
               letterSpacing: 1.2,
               color: const Color(0xFF1E293B),

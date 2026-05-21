@@ -53,14 +53,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     if (mounted) setState(() { _sessions = sessions; _loading = false; });
   }
 
-  void _openSession(GradingSession session) {
-    Navigator.of(context).push(
+  void _openSession(GradingSession session) async {
+    await Navigator.of(context).push(
       PageRouteBuilder(
         pageBuilder: (_, a, b) => MainGradingScreen(session: session),
         transitionsBuilder: (context, anim, secondaryAnim, child) => FadeTransition(opacity: anim, child: child),
         transitionDuration: const Duration(milliseconds: 300),
       ),
     );
+    _loadSessions();
   }
 
   Future<void> _deleteSession(GradingSession session) async {

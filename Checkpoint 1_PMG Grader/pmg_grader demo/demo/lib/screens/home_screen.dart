@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:file_picker/file_picker.dart';
 import '../services/session_service.dart';
+import '../services/file_service.dart';
 import 'main_screen.dart';
 
 // ─── Colour tokens ────────────────────────────────────────────────────────────
@@ -429,6 +430,10 @@ class _ImportFilesDialogState extends State<_ImportFilesDialog> {
 
   Future<void> _confirm() async {
     setState(() => _busy = true);
+    String? extractedMarker;
+    if (_xlsxPath != null) {
+      extractedMarker = await FileService().extractMarkerName(_xlsxPath!);
+    }
     final session = widget.sessionService.createNewSession().copyWith(
       name: _nameCtrl.text.trim().isNotEmpty
           ? _nameCtrl.text.trim()
@@ -438,6 +443,7 @@ class _ImportFilesDialogState extends State<_ImportFilesDialog> {
       examImagePath: _pngPath,
       studentZipPath: _zipPath,
       examCode: _pngPath != null ? _extractExamCode(_pngPath!) : null,
+      markerName: extractedMarker,
     );
     widget.onConfirm(session);
   }

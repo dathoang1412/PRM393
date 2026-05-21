@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:archive/archive.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:excel/excel.dart' as excel_pkg;
 import '../models/submission.dart';
 
 class FileService {
@@ -160,6 +161,55 @@ class FileService {
 
     if (result != null && result.files.single.path != null) {
       return extractDocxTextFromPath(result.files.single.path!);
+    }
+    return null;
+  }
+
+  Future<String?> extractMarkerName(String path) async {
+    try {
+      final bytes = File(path).readAsBytesSync();
+      var excel = excel_pkg.Excel.decodeBytes(bytes);
+      for (var table in excel.tables.keys) {
+        var sheet = excel.tables[table];
+        if (sheet == null || sheet.maxRows == 0) continue;
+        
+        // Find "Marker" column index
+        int markerColIndex = -1;
+        final searchLimit = sheet.maxRows > 5 ? 5 : sheet.maxRows;
+        for (int r = 0; r < searchLimit; r++) {
+          final row = sheet.rows[r];
+          for (int c = 0; c < row.length; c++) {
+            final val = row[c]?.value?.toString().trim().toLowerCase();
+            if (val == 'marker' || val == 'người chấm' || val == 'nguoi cham') {
+              markerColIndex = c;
+              break;
+            }
+          }
+          if (markerColIndex != -1) {
+            // Find first non-empty value below this header
+            for (int r2 = r + 1; r2 < sheet.maxRows; r2++) {
+              if (markerColIndex < sheet.rows[r2].length) {
+                final cellVal = sheet.rows[r2][markerColIndex]?.value?.toString().trim();
+                if (cellVal != null && cellVal.isNotEmpty) {
+                  return cellVal;
+                }
+              }
+            }
+          }
+        }
+        
+        // Fallback: look at column 1 (index 1), row 2 (index 2) onwards
+        for (int r = 2; r < sheet.maxRows; r++) {
+          if (sheet.rows[r].length > 1) {
+            final cellVal = sheet.rows[r][1]?.value?.toString().trim();
+            if (cellVal != null && cellVal.isNotEmpty) {
+              return cellVal;
+            }
+          }
+        }
+      }
+    } catch (e) {
+      // Ignore or log error
     }
     return null;
   }

@@ -40,6 +40,7 @@ Please analyze the submission and assign scores to $n primary components as outl
     final jsonFields = {};
     for (int i = 1; i <= n; i++) {
       jsonFields['"score$i"'] = '<number (0 to ${exam.criteria[i - 1].maxScore10})>';
+      jsonFields['"comment$i"'] = '<nhận xét tiếng Việt súc tích cho tiêu chí $i>';
     }
 
     final prompt = '''
@@ -49,7 +50,8 @@ Although the original rubric might be out of 100 points, you MUST evaluate and r
 Here are the criteria and their max scores on a 10-point scale:
 ${exam.criteria.asMap().entries.map((e) => '- ${e.value.name}: Max ${e.value.maxScore10} points').join('\n')}
 
-For the overall comment, you MUST write a neat, concise, and clear evaluation in Vietnamese for each individual question (e.g., 'Câu 1: ... | Câu 2: ...'). Keep the commentary brief and professional.
+For each criterion, assign a score and provide a specific, concise explanation/comment in Vietnamese explaining why the student got this score.
+Also, provide an overall brief summary of the entire submission in the "comment" field.
 
 Submission content:
 ${sub.content}
@@ -57,12 +59,12 @@ ${sub.content}
 Return ONLY valid JSON (no markdown block, just the json object):
 {
   ${jsonFields.entries.map((e) => '${e.key}: ${e.value}').join(',\n  ')},
-  "comment": "<Nhận xét tiếng Việt súc tích cho từng câu, tránh dài dòng lan man>"
+  "comment": "<Nhận xét tổng quan súc tích bằng tiếng Việt>"
 }
 ''';
 
     final response = await http.post(
-      Uri.parse('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$apiKey'),
+      Uri.parse('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey'),
       headers: {
         'Content-Type': 'application/json',
       },
@@ -82,15 +84,34 @@ Return ONLY valid JSON (no markdown block, just the json object):
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
-      final resultText = data['candidates'][0]['content']['parts'][0]['text'];
-      final resultJson = jsonDecode(resultText);
+      final resultText = data['candidates'][0]['content']['parts'][0]['text'] as String;
+      
+      // Robust JSON Extraction
+      Map<String, dynamic> resultJson;
+      try {
+        resultJson = jsonDecode(resultText.trim());
+      } catch (_) {
+        // Fallback: search for first '{' and last '}' to extract JSON block
+        final regExp = RegExp(r'\{[\s\S]*\}');
+        final match = regExp.firstMatch(resultText);
+        if (match != null) {
+          resultJson = jsonDecode(match.group(0)!);
+        } else {
+          throw Exception("AI output format error. Could not extract JSON: $resultText");
+        }
+      }
       
       final List<double> newAiScores = [];
+      final List<String> newAiComments = [];
       for (int i = 1; i <= n; i++) {
-        final val = resultJson['score$i'];
-        newAiScores.add((val as num?)?.toDouble() ?? 0.0);
+        final scoreVal = resultJson['score$i'];
+        newAiScores.add((scoreVal as num?)?.toDouble() ?? 0.0);
+        
+        final commentVal = resultJson['comment$i'] ?? "";
+        newAiComments.add(commentVal.toString());
       }
       sub.aiScores = newAiScores;
+      sub.aiComments = newAiComments;
       sub.aiComment = resultJson['comment']?.toString() ?? "";
       sub.hasAiGraded = true;
     } else {

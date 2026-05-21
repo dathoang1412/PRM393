@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/submission.dart';
 import '../models/exam_type.dart';
@@ -444,7 +445,24 @@ class _GradingPanelWidgetState extends State<GradingPanelWidget> {
             final index = entry.key;
             final c = entry.value;
             final scoreVal = index < sub.aiScores.length ? sub.aiScores[index] : 0.0;
-            return _buildAiScoreRow(c.name, scoreVal, c.maxScore10);
+            final commentVal = index < sub.aiComments.length ? sub.aiComments[index] : "";
+            return _buildAiScoreRow(
+              c.name,
+              scoreVal,
+              c.maxScore10,
+              commentVal,
+              () {
+                if (commentVal.isNotEmpty) {
+                  Clipboard.setData(ClipboardData(text: commentVal));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Đã sao chép nhận xét: "${c.name}"'),
+                      duration: const Duration(seconds: 1),
+                    ),
+                  );
+                }
+              },
+            );
           }),
           const Divider(height: 32),
           Text(
@@ -587,15 +605,15 @@ class _GradingPanelWidgetState extends State<GradingPanelWidget> {
     );
   }
 
-  Widget _buildAiScoreRow(String label, double score, double maxScore) {
+  Widget _buildAiScoreRow(String label, double score, double maxScore, String comment, VoidCallback onCopy) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             label,
-            style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B)),
+            style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B), fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 4),
           Row(
@@ -614,6 +632,55 @@ class _GradingPanelWidgetState extends State<GradingPanelWidget> {
                 style: GoogleFonts.inter(
                   fontSize: 12,
                   color: const Color(0xFF94A3B8),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          // Comment box with a copy button next to it
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Text(
+                    comment.isNotEmpty ? comment : "Không có nhận xét từ AI cho câu này.",
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: comment.isNotEmpty ? const Color(0xFF334155) : const Color(0xFF94A3B8),
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Tooltip(
+                message: 'Sao chép nhận xét',
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: onCopy,
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: const Icon(
+                        Icons.copy_rounded,
+                        size: 16,
+                        color: Color(0xFF475569),
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ],

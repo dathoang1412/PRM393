@@ -9,6 +9,7 @@ class Submission {
   String comment = "";
   
   List<double> aiScores = [];
+  List<String> aiComments = [];
   String aiComment = "";
   bool hasAiGraded = false;
 
@@ -39,6 +40,15 @@ class Submission {
         }
       }
       aiScores = newAiScores;
+    }
+    if (aiComments.length != exam.criteria.length) {
+      final newAiComments = List.filled(exam.criteria.length, "");
+      for (int i = 0; i < exam.criteria.length; i++) {
+        if (i < aiComments.length) {
+          newAiComments[i] = aiComments[i];
+        }
+      }
+      aiComments = newAiComments;
     }
   }
 

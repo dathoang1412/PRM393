@@ -8,10 +8,11 @@ class ContentViewerWidget extends StatelessWidget {
   final int currentIndex;
   final int totalSubmissions;
   final ValueChanged<ExamType?> onExamTypeChanged;
+  final VoidCallback onImportDocxRubric;
   final VoidCallback onConfigureCriteria;
   final VoidCallback? onPrev;
   final VoidCallback? onNext;
-  final List<ExamType> examTypes;
+  final List<ExamType>? examTypes;
 
   const ContentViewerWidget({
     super.key,
@@ -19,10 +20,11 @@ class ContentViewerWidget extends StatelessWidget {
     required this.currentIndex,
     required this.totalSubmissions,
     required this.onExamTypeChanged,
+    required this.onImportDocxRubric,
     required this.onConfigureCriteria,
     required this.onPrev,
     required this.onNext,
-    required this.examTypes,
+    this.examTypes,
   });
 
   @override
@@ -97,7 +99,7 @@ class ContentViewerWidget extends StatelessWidget {
                     DropdownButtonHideUnderline(
                       child: DropdownButton<ExamType>(
                         value: exam,
-                        items: examTypes
+                        items: (examTypes ?? defaultExamTypes)
                             .map((e) => DropdownMenuItem(value: e, child: Text('Mã đề ${e.code}')))
                             .toList(),
                         onChanged: onExamTypeChanged,
@@ -122,6 +124,20 @@ class ContentViewerWidget extends StatelessWidget {
                   runSpacing: 8,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
+                    ElevatedButton.icon(
+                      onPressed: onImportDocxRubric,
+                      icon: const Icon(Icons.description_rounded, size: 16),
+                      label: const Text("Nhập Rubric Word (.docx)"),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFF1F5F9),
+                        foregroundColor: const Color(0xFF475569),
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
                     if (hasCustomRubric)
                       Row(
                         mainAxisSize: MainAxisSize.min,
@@ -129,7 +145,7 @@ class ContentViewerWidget extends StatelessWidget {
                           const Icon(Icons.check_circle_rounded, color: Colors.green, size: 18),
                           const SizedBox(width: 4),
                           Text(
-                            "Đã nạp Word Rubric từ phiên",
+                            "Đã nạp Word Rubric",
                             style: GoogleFonts.inter(
                               color: Colors.green.shade700,
                               fontWeight: FontWeight.w600,

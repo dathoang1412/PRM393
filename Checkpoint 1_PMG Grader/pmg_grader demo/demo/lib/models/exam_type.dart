@@ -5,6 +5,8 @@ class Criterion {
   Criterion(this.name, this.maxScore100);
 
   double get maxScore10 => maxScore100 / 10;
+
+  Criterion copy() => Criterion(name, maxScore100);
 }
 
 class ExamType {
@@ -15,6 +17,12 @@ class ExamType {
   ExamType(this.code, this.criteria, {this.customRubric});
 
   double get totalMaxScore10 => criteria.fold(0.0, (sum, c) => sum + c.maxScore10);
+
+  ExamType copy() => ExamType(
+        code,
+        criteria.map((criterion) => criterion.copy()).toList(),
+        customRubric: customRubric,
+      );
 }
 
 final List<ExamType> defaultExamTypes = [
@@ -36,3 +44,6 @@ final List<ExamType> defaultExamTypes = [
   ]),
 ];
 
+List<ExamType> createDefaultExamTypes() {
+  return defaultExamTypes.map((exam) => exam.copy()).toList();
+}

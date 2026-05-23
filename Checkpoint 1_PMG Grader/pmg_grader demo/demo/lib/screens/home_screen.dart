@@ -1,25 +1,23 @@
 import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:file_picker/file_picker.dart';
-import '../services/session_service.dart';
+
 import '../services/file_service.dart';
+import '../services/session_service.dart';
 import 'main_screen.dart';
 
-// ─── Colour tokens ────────────────────────────────────────────────────────────
-const _kBg = Color(0xFF0F1117);
-const _kSurface = Color(0xFF1A1D27);
-const _kCard = Color(0xFF20243A);
-const _kBorder = Color(0xFF2E3350);
-const _kPrimary = Color(0xFF6C63FF);
-const _kPrimaryLight = Color(0xFF9D97FF);
-const _kAccent = Color(0xFF00D4AA);
-const _kTextPrimary = Color(0xFFF0F2FF);
-const _kTextSecondary = Color(0xFF8B8FA8);
-const _kSuccess = Color(0xFF22C55E);
-const _kWarning = Color(0xFFF59E0B);
+const _bg = Color(0xFFF6F8FA);
+const _surface = Colors.white;
+const _border = Color(0xFFD0D7DE);
+const _borderSoft = Color(0xFFEAEFF4);
+const _text = Color(0xFF24292F);
+const _muted = Color(0xFF57606A);
+const _primary = Color(0xFF0969DA);
+const _success = Color(0xFF1A7F37);
+const _warning = Color(0xFF9A6700);
 
-// ─── Home Screen ──────────────────────────────────────────────────────────────
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -27,648 +25,293 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
+class _HomeScreenState extends State<HomeScreen> {
   final SessionService _sessionService = SessionService();
   List<GradingSession> _sessions = [];
   bool _loading = true;
-  late AnimationController _fabAnim;
+  int _selectedIndex = -1;
 
   @override
   void initState() {
     super.initState();
-    _fabAnim = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-    )..forward();
     _loadSessions();
-  }
-
-  @override
-  void dispose() {
-    _fabAnim.dispose();
-    super.dispose();
   }
 
   Future<void> _loadSessions() async {
     final sessions = await _sessionService.loadSessions();
-    if (mounted) setState(() { _sessions = sessions; _loading = false; });
+    if (!mounted) return;
+    setState(() {
+      _sessions = sessions;
+      _loading = false;
+      if (_sessions.isEmpty) {
+        _selectedIndex = -1;
+      } else if (_selectedIndex < 0 || _selectedIndex >= _sessions.length) {
+        _selectedIndex = 0;
+      }
+    });
   }
 
-  void _openSession(GradingSession session) async {
+  Future<void> _openSession(GradingSession session) async {
     await Navigator.of(context).push(
-      PageRouteBuilder(
-        pageBuilder: (_, a, b) => MainGradingScreen(session: session),
-        transitionsBuilder: (context, anim, secondaryAnim, child) => FadeTransition(opacity: anim, child: child),
-        transitionDuration: const Duration(milliseconds: 300),
-      ),
+      MaterialPageRoute(builder: (_) => MainGradingScreen(session: session)),
     );
-    _loadSessions();
+    await _loadSessions();
   }
 
   Future<void> _deleteSession(GradingSession session) async {
-    final confirm = await showDialog<bool>(
+    final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => _ConfirmDeleteDialog(sessionName: session.name),
+      builder: (context) => AlertDialog(
+        title: const Text('Delete collection?'),
+        content: Text('Delete "${session.name}" from this workspace?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFCF222E),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
     );
-    if (confirm == true) {
-      await _sessionService.deleteSession(session.id);
-      if (mounted) _loadSessions();
-    }
+    if (confirmed != true) return;
+    await _sessionService.deleteSession(session.id);
+    await _loadSessions();
   }
 
-  void _createNewSession() {
-    showDialog(
+  Future<void> _showCreateCollectionDialog() async {
+    await showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => _ImportFilesDialog(
+      builder: (context) => _PrepareCollectionDialog(
+        sessionService: _sessionService,
         onConfirm: (session) async {
           await _sessionService.saveSession(session);
-          if (!ctx.mounted) return;
-          Navigator.of(ctx).pop();
-          _openSession(session);
+          if (!context.mounted) return;
+          Navigator.of(context).pop();
+          await _openSession(session);
         },
-        sessionService: _sessionService,
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final selected = _selectedIndex >= 0 && _selectedIndex < _sessions.length
+        ? _sessions[_selectedIndex]
+        : null;
+
     return Scaffold(
-      backgroundColor: _kBg,
-      body: Stack(
+      backgroundColor: _bg,
+      body: Row(
         children: [
-          // ── Decorative blobs ──
-          Positioned(top: -120, right: -80, child: _GlowBlob(color: _kPrimary.withValues(alpha: 0.15), size: 400)),
-          Positioned(bottom: -80, left: -60, child: _GlowBlob(color: _kAccent.withValues(alpha: 0.10), size: 320)),
-
-          Column(
-            children: [
-              _buildHeader(),
-              Expanded(
-                child: _loading
-                    ? const Center(child: CircularProgressIndicator(color: _kPrimary))
-                    : _sessions.isEmpty
-                        ? _buildEmptyState()
-                        : _buildSessionList(),
-              ),
-            ],
+          _buildSidebar(),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildTopBar(),
+                Expanded(
+                  child: _loading
+                      ? const Center(child: CircularProgressIndicator())
+                      : selected == null
+                      ? _buildEmptyWorkspace()
+                      : _buildSessionPreview(selected),
+                ),
+              ],
+            ),
           ),
         ],
-      ),
-      floatingActionButton: ScaleTransition(
-        scale: CurvedAnimation(parent: _fabAnim, curve: Curves.elasticOut),
-        child: _NewSessionFab(onTap: _createNewSession),
       ),
     );
   }
 
-  // ── Header ────────────────────────────────────────────────────────────────
-  Widget _buildHeader() {
+  Widget _buildSidebar() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(32, 48, 32, 28),
-      decoration: BoxDecoration(
-        color: _kSurface,
-        border: Border(bottom: BorderSide(color: _kBorder, width: 1)),
+      width: 320,
+      decoration: const BoxDecoration(
+        color: _surface,
+        border: Border(right: BorderSide(color: _border)),
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 44, height: 44,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [_kPrimary, _kAccent],
-                begin: Alignment.topLeft, end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(Icons.school_rounded, color: Colors.white, size: 24),
-          ),
-          const SizedBox(width: 16),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('PMG Grader',
-                  style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.w700, color: _kTextPrimary)),
-              Text('Hệ thống chấm bài tự động',
-                  style: GoogleFonts.inter(fontSize: 13, color: _kTextSecondary)),
-            ],
-          ),
-          const Spacer(),
-          if (_sessions.isNotEmpty) ...[
-            _StatPill(
-              icon: Icons.folder_open_rounded,
-              label: '${_sessions.length} phiên',
-              color: _kPrimary,
-            ),
-            const SizedBox(width: 12),
-            _StatPill(
-              icon: Icons.check_circle_outline_rounded,
-              label: '${_sessions.where((s) => s.gradedCount > 0).length} đang dở',
-              color: _kAccent,
-            ),
-          ]
-        ],
-      ),
-    );
-  }
-
-  // ── Empty state ───────────────────────────────────────────────────────────
-  Widget _buildEmptyState() {
-    return Center(
       child: Column(
-        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Container(
-            width: 120, height: 120,
-            decoration: BoxDecoration(
-              color: _kCard,
-              borderRadius: BorderRadius.circular(32),
-              border: Border.all(color: _kBorder),
-            ),
-            child: const Icon(Icons.folder_open_rounded, size: 56, color: _kPrimary),
-          ),
-          const SizedBox(height: 28),
-          Text('Chưa có phiên chấm nào',
-              style: GoogleFonts.outfit(fontSize: 26, fontWeight: FontWeight.w700, color: _kTextPrimary)),
-          const SizedBox(height: 10),
-          Text('Nhấn nút "Tạo mới" để bắt đầu một phiên chấm bài mới.',
-              style: GoogleFonts.inter(fontSize: 14, color: _kTextSecondary)),
-          const SizedBox(height: 36),
-          _GradientButton(
-            onTap: _createNewSession,
-            label: '＋  Tạo phiên mới',
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── Session list ──────────────────────────────────────────────────────────
-  Widget _buildSessionList() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(32, 28, 32, 16),
-          child: Text('Phiên đang chấm dở',
-              style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w700, color: _kTextPrimary)),
-        ),
-        Expanded(
-          child: ListView.separated(
-            padding: const EdgeInsets.fromLTRB(32, 0, 32, 120),
-            itemCount: _sessions.length,
-            separatorBuilder: (context, index) => const SizedBox(height: 14),
-            itemBuilder: (_, i) => _SessionCard(
-              session: _sessions[i],
-              onOpen: () => _openSession(_sessions[i]),
-              onDelete: () => _deleteSession(_sessions[i]),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ─── Session Card ─────────────────────────────────────────────────────────────
-class _SessionCard extends StatefulWidget {
-  final GradingSession session;
-  final VoidCallback onOpen;
-  final VoidCallback onDelete;
-
-  const _SessionCard({required this.session, required this.onOpen, required this.onDelete});
-
-  @override
-  State<_SessionCard> createState() => _SessionCardState();
-}
-
-class _SessionCardState extends State<_SessionCard> {
-  bool _hovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final s = widget.session;
-    final progress = s.progress;
-    final progressPercent = (progress * 100).round();
-
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        decoration: BoxDecoration(
-          color: _hovered ? _kCard.withValues(alpha: 0.9) : _kCard,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: _hovered ? _kPrimary.withValues(alpha: 0.5) : _kBorder,
-            width: _hovered ? 1.5 : 1,
-          ),
-          boxShadow: _hovered
-              ? [BoxShadow(color: _kPrimary.withValues(alpha: 0.08), blurRadius: 20, spreadRadius: 2)]
-              : [],
-        ),
-        child: InkWell(
-          onTap: widget.onOpen,
-          borderRadius: BorderRadius.circular(16),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 22, 18, 16),
             child: Row(
               children: [
-                // Icon
                 Container(
-                  width: 52, height: 52,
+                  width: 36,
+                  height: 36,
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: s.isComplete
-                          ? [_kPrimary, _kPrimaryLight]
-                          : [_kWarning, _kWarning.withValues(alpha: 0.7)],
-                      begin: Alignment.topLeft, end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(14),
+                    color: const Color(0xFFDDF4FF),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFF54AEFF)),
                   ),
-                  child: Icon(
-                    s.isComplete ? Icons.folder_special_rounded : Icons.folder_outlined,
-                    color: Colors.white, size: 26,
+                  child: const Icon(
+                    Icons.collections_bookmark_outlined,
+                    color: _primary,
+                    size: 20,
                   ),
                 ),
-                const SizedBox(width: 18),
-                // Info
+                const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(s.name,
-                                style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w600, color: _kTextPrimary),
-                                overflow: TextOverflow.ellipsis),
-                          ),
-                          if (s.examCode != null) ...[
-                            const SizedBox(width: 8),
-                            _Tag(label: 'Mã đề ${s.examCode}', color: _kAccent),
-                          ],
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          Icon(Icons.person_outline_rounded, size: 13, color: _kTextSecondary),
-                          const SizedBox(width: 4),
-                          Text('Người chấm: ${s.markerName ?? "Chưa xác định"}',
-                              style: GoogleFonts.inter(fontSize: 12, color: _kTextSecondary)),
-                          const SizedBox(width: 16),
-                          Icon(Icons.access_time_rounded, size: 13, color: _kTextSecondary),
-                          const SizedBox(width: 4),
-                          Text(_formatRelative(s.lastModified),
-                              style: GoogleFonts.inter(fontSize: 12, color: _kTextSecondary)),
-                        ],
-                      ),
-                      if (s.totalStudents > 0) ...[
-                        const SizedBox(height: 10),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(4),
-                                child: LinearProgressIndicator(
-                                  value: progress,
-                                  backgroundColor: _kBorder,
-                                  valueColor: AlwaysStoppedAnimation(
-                                    progress >= 1.0 ? _kSuccess : _kPrimary,
-                                  ),
-                                  minHeight: 6,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Text('$progressPercent%  (${s.gradedCount}/${s.totalStudents})',
-                                style: GoogleFonts.inter(fontSize: 11, color: _kTextSecondary)),
-                          ],
+                      Text(
+                        'PMG Grader',
+                        style: GoogleFonts.outfit(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: _text,
                         ),
-                      ],
-                      // File status chips
-                      const SizedBox(height: 10),
-                      Wrap(
-                        spacing: 6,
-                        children: [
-                          _FileChip(label: 'Guide', ok: s.gradingGuideDocPath != null),
-                          _FileChip(label: 'Mark', ok: s.markInputXlsxPath != null),
-                          _FileChip(label: 'Đề', ok: s.examImagePath != null),
-                          _FileChip(label: 'Bài nộp', ok: s.studentZipPath != null),
-                        ],
+                      ),
+                      Text(
+                        'Collections',
+                        style: GoogleFonts.inter(fontSize: 12, color: _muted),
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(width: 12),
-                // Actions
-                Column(
-                  children: [
-                    _ActionBtn(
-                      icon: Icons.play_arrow_rounded,
-                      tooltip: 'Mở',
-                      color: _kPrimary,
-                      onTap: widget.onOpen,
-                    ),
-                    const SizedBox(height: 8),
-                    _ActionBtn(
-                      icon: Icons.delete_outline_rounded,
-                      tooltip: 'Xoá',
-                      color: Colors.redAccent,
-                      onTap: widget.onDelete,
-                    ),
-                  ],
                 ),
               ],
             ),
           ),
-        ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 18),
+            child: ElevatedButton.icon(
+              onPressed: _showCreateCollectionDialog,
+              icon: const Icon(Icons.add),
+              label: const Text('Create collection'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _primary,
+                foregroundColor: Colors.white,
+                minimumSize: const Size.fromHeight(42),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(6),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 18),
+            child: Text(
+              '${_sessions.length} saved',
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: _muted,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: _sessions.isEmpty
+                ? Padding(
+                    padding: const EdgeInsets.all(18),
+                    child: Text(
+                      'No collections yet.',
+                      style: GoogleFonts.inter(fontSize: 13, color: _muted),
+                    ),
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(10, 0, 10, 16),
+                    itemCount: _sessions.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 4),
+                    itemBuilder: (context, index) {
+                      final session = _sessions[index];
+                      return _SidebarSessionTile(
+                        session: session,
+                        selected: index == _selectedIndex,
+                        onTap: () => setState(() => _selectedIndex = index),
+                        onOpen: () => _openSession(session),
+                        onDelete: () => _deleteSession(session),
+                      );
+                    },
+                  ),
+          ),
+        ],
       ),
     );
   }
 
-  String _formatRelative(DateTime dt) {
-    final diff = DateTime.now().difference(dt);
-    if (diff.inMinutes < 1) return 'vừa xong';
-    if (diff.inHours < 1) return '${diff.inMinutes} phút trước';
-    if (diff.inDays < 1) return '${diff.inHours} giờ trước';
-    if (diff.inDays < 7) return '${diff.inDays} ngày trước';
-    return '${dt.day}/${dt.month}/${dt.year}';
-  }
-}
-
-// ─── Import Files Dialog ──────────────────────────────────────────────────────
-class _ImportFilesDialog extends StatefulWidget {
-  final void Function(GradingSession) onConfirm;
-  final SessionService sessionService;
-
-  const _ImportFilesDialog({required this.onConfirm, required this.sessionService});
-
-  @override
-  State<_ImportFilesDialog> createState() => _ImportFilesDialogState();
-}
-
-class _ImportFilesDialogState extends State<_ImportFilesDialog> {
-  String? _docPath, _xlsxPath, _pngPath, _zipPath;
-  final TextEditingController _nameCtrl = TextEditingController();
-  bool _busy = false;
-
-  bool get _canProceed =>
-      _docPath != null && _xlsxPath != null && _pngPath != null && _zipPath != null;
-
-  Future<void> _pick(String ext, void Function(String) onPicked) async {
-    final r = await FilePicker.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: [ext],
+  Widget _buildTopBar() {
+    return Container(
+      height: 64,
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      decoration: const BoxDecoration(
+        color: _surface,
+        border: Border(bottom: BorderSide(color: _border)),
+      ),
+      child: Row(
+        children: [
+          Text(
+            'Collection workspace',
+            style: GoogleFonts.outfit(
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              color: _text,
+            ),
+          ),
+          const Spacer(),
+          OutlinedButton.icon(
+            onPressed: _loadSessions,
+            icon: const Icon(Icons.refresh, size: 18),
+            label: const Text('Refresh'),
+          ),
+        ],
+      ),
     );
-    if (r != null && r.files.single.path != null) {
-      onPicked(r.files.single.path!);
-    }
   }
 
-  Future<void> _confirm() async {
-    setState(() => _busy = true);
-    String? extractedMarker;
-    if (_xlsxPath != null) {
-      extractedMarker = await FileService().extractMarkerName(_xlsxPath!);
-    }
-    final session = widget.sessionService.createNewSession().copyWith(
-      name: _nameCtrl.text.trim().isNotEmpty
-          ? _nameCtrl.text.trim()
-          : null,
-      gradingGuideDocPath: _docPath,
-      markInputXlsxPath: _xlsxPath,
-      examImagePath: _pngPath,
-      studentZipPath: _zipPath,
-      examCode: _pngPath != null ? _extractExamCode(_pngPath!) : null,
-      markerName: extractedMarker,
-    );
-    widget.onConfirm(session);
-  }
-
-  String? _extractExamCode(String path) {
-    final name = path.split(RegExp(r'[/\\]')).last;
-    final match = RegExp(r'(\d+)').firstMatch(name);
-    return match?.group(1);
-  }
-
-  @override
-  void dispose() {
-    _nameCtrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 32),
-      child: Container(
-        width: 560,
-        decoration: BoxDecoration(
-          color: _kSurface,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: _kBorder),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 40, offset: const Offset(0, 16))],
-        ),
+  Widget _buildEmptyWorkspace() {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 460),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // ── Header ──
-            Container(
-              padding: const EdgeInsets.fromLTRB(28, 24, 20, 20),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [_kPrimary.withValues(alpha: 0.15), _kAccent.withValues(alpha: 0.08)],
-                  begin: Alignment.topLeft, end: Alignment.bottomRight,
-                ),
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: _kPrimary.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.create_new_folder_rounded, color: _kPrimary, size: 22),
-                  ),
-                  const SizedBox(width: 14),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Tạo phiên chấm mới',
-                          style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w700, color: _kTextPrimary)),
-                      Text('Import các file cần thiết để bắt đầu',
-                          style: GoogleFonts.inter(fontSize: 12, color: _kTextSecondary)),
-                    ],
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close_rounded, color: _kTextSecondary),
-                  ),
-                ],
+            const Icon(Icons.folder_open_outlined, size: 56, color: _muted),
+            const SizedBox(height: 18),
+            Text(
+              'Create your first collection',
+              style: GoogleFonts.outfit(
+                fontSize: 24,
+                fontWeight: FontWeight.w800,
+                color: _text,
               ),
             ),
-
-            // ── Body ──
-            Flexible(
-              child: SingleChildScrollView(
-                child: Padding(
-                  padding: const EdgeInsets.all(28),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                  // Session name
-                  Text('Tên phiên (tuỳ chọn)',
-                      style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: _kTextSecondary)),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: _nameCtrl,
-                    style: GoogleFonts.inter(color: _kTextPrimary, fontSize: 14),
-                    decoration: InputDecoration(
-                      hintText: 'VD: Chấm giữa kỳ - SE1857',
-                      hintStyle: GoogleFonts.inter(color: _kTextSecondary, fontSize: 14),
-                      filled: true,
-                      fillColor: _kCard,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(color: _kBorder),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(color: _kBorder),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(color: _kPrimary, width: 1.5),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-                  Text('Files cần import',
-                      style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: _kTextSecondary)),
-                  const SizedBox(height: 12),
-
-                  // File import rows
-                  _FileImportRow(
-                    icon: Icons.description_outlined,
-                    iconColor: const Color(0xFF818CF8),
-                    label: 'Grading Guide',
-                    hint: 'File .docx hướng dẫn chấm điểm',
-                    ext: 'docx',
-                    filePath: _docPath,
-                    onPick: () => _pick('docx', (p) => setState(() => _docPath = p)),
-                  ),
-                  const SizedBox(height: 10),
-                  _FileImportRow(
-                    icon: Icons.table_chart_outlined,
-                    iconColor: const Color(0xFF34D399),
-                    label: 'Mark Input',
-                    hint: 'File .xlsx thông tin người chấm',
-                    ext: 'xlsx',
-                    filePath: _xlsxPath,
-                    onPick: () => _pick('xlsx', (p) => setState(() => _xlsxPath = p)),
-                  ),
-                  const SizedBox(height: 10),
-                  _FileImportRow(
-                    icon: Icons.image_outlined,
-                    iconColor: const Color(0xFFFBBF24),
-                    label: 'Đề thi',
-                    hint: 'File .png ảnh mã đề',
-                    ext: 'png',
-                    filePath: _pngPath,
-                    onPick: () => _pick('png', (p) => setState(() => _pngPath = p)),
-                  ),
-                  const SizedBox(height: 10),
-                  _FileImportRow(
-                    icon: Icons.folder_zip_outlined,
-                    iconColor: const Color(0xFFF472B6),
-                    label: 'Bài nộp học sinh',
-                    hint: 'File .zip chứa bài làm',
-                    ext: 'zip',
-                    filePath: _zipPath,
-                    onPick: () => _pick('zip', (p) => setState(() => _zipPath = p)),
-                  ),
-
-                  const SizedBox(height: 28),
-
-                  // Progress indicator
-                  Row(
-                    children: [
-                      ...[_docPath, _xlsxPath, _pngPath, _zipPath].map(
-                        (p) => Expanded(
-                          child: Container(
-                            height: 4,
-                            margin: const EdgeInsets.only(right: 4),
-                            decoration: BoxDecoration(
-                              color: p != null ? _kAccent : _kBorder,
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    _canProceed
-                        ? '✓ Đã chọn đủ 4 files — sẵn sàng bắt đầu!'
-                        : '${[_docPath, _xlsxPath, _pngPath, _zipPath].where((p) => p != null).length}/4 files đã chọn',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      color: _canProceed ? _kAccent : _kTextSecondary,
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Buttons
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: _kTextSecondary,
-                            side: const BorderSide(color: _kBorder),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          ),
-                          child: Text('Huỷ', style: GoogleFonts.inter(fontSize: 14)),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        flex: 2,
-                        child: AnimatedOpacity(
-                          duration: const Duration(milliseconds: 200),
-                          opacity: _canProceed ? 1.0 : 0.4,
-                          child: ElevatedButton(
-                            onPressed: (_canProceed && !_busy) ? _confirm : null,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: _kPrimary,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                              elevation: 0,
-                            ),
-                            child: _busy
-                                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                                : Text('Bắt đầu chấm →', style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w600)),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                    ],
-                  ),
+            const SizedBox(height: 8),
+            Text(
+              'Prepare the grading files, then open the collection workspace to review submissions.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                height: 1.4,
+                color: _muted,
+              ),
+            ),
+            const SizedBox(height: 22),
+            ElevatedButton.icon(
+              onPressed: _showCreateCollectionDialog,
+              icon: const Icon(Icons.add),
+              label: const Text('Create collection'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 14,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(6),
                 ),
               ),
             ),
@@ -677,120 +320,496 @@ class _ImportFilesDialogState extends State<_ImportFilesDialog> {
       ),
     );
   }
-}
 
-// ─── Confirm Delete Dialog ────────────────────────────────────────────────────
-class _ConfirmDeleteDialog extends StatelessWidget {
-  final String sessionName;
-  const _ConfirmDeleteDialog({required this.sessionName});
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      backgroundColor: _kSurface,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: _kBorder)),
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(children: [
-              const Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 22),
-              const SizedBox(width: 8),
-              Text('Xoá phiên chấm?', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w700, color: _kTextPrimary)),
-            ]),
-            const SizedBox(height: 12),
-            Text('Bạn có chắc muốn xoá "$sessionName"? Hành động này không thể hoàn tác.',
-                style: GoogleFonts.inter(fontSize: 13, color: _kTextSecondary)),
-            const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
+  Widget _buildSessionPreview(GradingSession session) {
+    final progressPercent = (session.progress * 100).round();
+    return Padding(
+      padding: const EdgeInsets.all(28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      session.name,
+                      style: GoogleFonts.outfit(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                        color: _text,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Last modified ${_formatDate(session.lastModified)}',
+                      style: GoogleFonts.inter(fontSize: 13, color: _muted),
+                    ),
+                  ],
+                ),
+              ),
+              ElevatedButton.icon(
+                onPressed: () => _openSession(session),
+                icon: const Icon(Icons.arrow_forward),
+                label: const Text('Open collection'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 14,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              _MetricPanel(label: 'Progress', value: '$progressPercent%'),
+              _MetricPanel(
+                label: 'Reviewed',
+                value: '${session.gradedCount}/${session.totalStudents}',
+              ),
+              _MetricPanel(
+                label: 'Marker',
+                value: session.markerName?.isNotEmpty == true
+                    ? session.markerName!
+                    : 'Unset',
+              ),
+              _MetricPanel(label: 'Exam', value: session.examCode ?? 'Unset'),
+            ],
+          ),
+          const SizedBox(height: 24),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(18),
+            decoration: _panelDecoration(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: Text('Huỷ', style: GoogleFonts.inter(color: _kTextSecondary)),
+                Text(
+                  'Preparation files',
+                  style: GoogleFonts.outfit(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: _text,
+                  ),
                 ),
-                const SizedBox(width: 8),
-                ElevatedButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
-                  child: Text('Xoá', style: GoogleFonts.inter()),
-                ),
+                const SizedBox(height: 12),
+                _fileRow('Rubric grading file', session.gradingGuideDocPath),
+                _fileRow('Mark input', session.markInputXlsxPath),
+                _fileRow('Exam image', session.examImagePath),
+                _fileRow('Submissions zip', session.studentZipPath),
               ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
+
+  Widget _fileRow(String label, String? path) {
+    final ok = path != null && path.isNotEmpty;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        children: [
+          Icon(
+            ok ? Icons.check_circle_outline : Icons.radio_button_unchecked,
+            size: 18,
+            color: ok ? _success : _muted,
+          ),
+          const SizedBox(width: 10),
+          SizedBox(
+            width: 130,
+            child: Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: _text,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              ok ? _basename(path) : 'Not selected',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                color: ok ? _muted : _warning,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')} '
+        '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+  }
 }
 
-// ─── Reusable small widgets ───────────────────────────────────────────────────
+class _SidebarSessionTile extends StatelessWidget {
+  final GradingSession session;
+  final bool selected;
+  final VoidCallback onTap;
+  final VoidCallback onOpen;
+  final VoidCallback onDelete;
 
-class _FileImportRow extends StatelessWidget {
-  final IconData icon;
-  final Color iconColor;
-  final String label;
-  final String hint;
-  final String ext;
-  final String? filePath;
-  final VoidCallback onPick;
-
-  const _FileImportRow({
-    required this.icon, required this.iconColor, required this.label,
-    required this.hint, required this.ext, required this.filePath, required this.onPick,
+  const _SidebarSessionTile({
+    required this.session,
+    required this.selected,
+    required this.onTap,
+    required this.onOpen,
+    required this.onDelete,
   });
 
   @override
   Widget build(BuildContext context) {
-    final picked = filePath != null;
-    final filename = picked ? filePath!.split(Platform.pathSeparator).last : null;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: picked ? _kAccent.withValues(alpha: 0.06) : _kCard,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: picked ? _kAccent.withValues(alpha: 0.4) : _kBorder),
+    return Material(
+      color: selected ? const Color(0xFFDDF4FF) : Colors.transparent,
+      borderRadius: BorderRadius.circular(6),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(6),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+          child: Row(
+            children: [
+              Icon(
+                Icons.folder_outlined,
+                size: 20,
+                color: selected ? _primary : _muted,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      session.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: _text,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      '${session.gradedCount}/${session.totalStudents} reviewed',
+                      style: GoogleFonts.inter(fontSize: 12, color: _muted),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                tooltip: 'Open',
+                onPressed: onOpen,
+                icon: const Icon(Icons.open_in_new, size: 17),
+                color: _muted,
+              ),
+              IconButton(
+                tooltip: 'Delete',
+                onPressed: onDelete,
+                icon: const Icon(Icons.delete_outline, size: 17),
+                color: const Color(0xFFCF222E),
+              ),
+            ],
+          ),
+        ),
       ),
+    );
+  }
+}
+
+class _PrepareCollectionDialog extends StatefulWidget {
+  final SessionService sessionService;
+  final Future<void> Function(GradingSession session) onConfirm;
+
+  const _PrepareCollectionDialog({
+    required this.sessionService,
+    required this.onConfirm,
+  });
+
+  @override
+  State<_PrepareCollectionDialog> createState() =>
+      _PrepareCollectionDialogState();
+}
+
+class _PrepareCollectionDialogState extends State<_PrepareCollectionDialog> {
+  final TextEditingController _nameController = TextEditingController();
+  String? _guidePath;
+  String? _markInputPath;
+  String? _examImagePath;
+  String? _submissionsZipPath;
+  bool _busy = false;
+
+  bool get _canCreate {
+    return _guidePath != null &&
+        _markInputPath != null &&
+        _examImagePath != null &&
+        _submissionsZipPath != null;
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pick(
+    String extension,
+    void Function(String path) onPicked,
+  ) async {
+    final result = await FilePicker.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: [extension],
+    );
+    if (result?.files.single.path == null) return;
+    setState(() => onPicked(result!.files.single.path!));
+  }
+
+  Future<void> _confirm() async {
+    if (!_canCreate || _busy) return;
+    setState(() => _busy = true);
+    try {
+      final markerName = await FileService().extractMarkerName(_markInputPath!);
+      final session = widget.sessionService.createNewSession().copyWith(
+        name: _nameController.text.trim().isNotEmpty
+            ? _nameController.text.trim()
+            : null,
+        gradingGuideDocPath: _guidePath,
+        markInputXlsxPath: _markInputPath,
+        examImagePath: _examImagePath,
+        studentZipPath: _submissionsZipPath,
+        examCode: _examImagePath != null
+            ? _basename(_examImagePath!).split('.').first
+            : null,
+        markerName: markerName,
+      );
+      await widget.onConfirm(session);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: _surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: const BorderSide(color: _border),
+      ),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 680),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(22, 18, 14, 14),
+              child: Row(
+                children: [
+                  const Icon(Icons.create_new_folder_outlined, color: _primary),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Prepare grading collection',
+                      style: GoogleFonts.outfit(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        color: _text,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: _busy ? null : () => Navigator.pop(context),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1, color: _border),
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(22),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Collection name',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: _muted,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _nameController,
+                      decoration: const InputDecoration(
+                        hintText: 'Example: PMG grading batch 1',
+                        border: OutlineInputBorder(),
+                        isDense: true,
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    _FilePickRow(
+                      icon: Icons.description_outlined,
+                      label: 'Rubric grading file',
+                      hint: 'Select .docx',
+                      path: _guidePath,
+                      onTap: () => _pick('docx', (path) => _guidePath = path),
+                    ),
+                    _FilePickRow(
+                      icon: Icons.table_chart_outlined,
+                      label: 'Mark input',
+                      hint: 'Select .xlsx',
+                      path: _markInputPath,
+                      onTap: () =>
+                          _pick('xlsx', (path) => _markInputPath = path),
+                    ),
+                    _FilePickRow(
+                      icon: Icons.image_outlined,
+                      label: 'Exam image',
+                      hint: 'Select .png',
+                      path: _examImagePath,
+                      onTap: () =>
+                          _pick('png', (path) => _examImagePath = path),
+                    ),
+                    _FilePickRow(
+                      icon: Icons.folder_zip_outlined,
+                      label: 'Submissions',
+                      hint: 'Select .zip',
+                      path: _submissionsZipPath,
+                      onTap: () =>
+                          _pick('zip', (path) => _submissionsZipPath = path),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const Divider(height: 1, color: _border),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Text(
+                    '${[_guidePath, _markInputPath, _examImagePath, _submissionsZipPath].where((path) => path != null).length}/4 files selected',
+                    style: GoogleFonts.inter(fontSize: 13, color: _muted),
+                  ),
+                  const Spacer(),
+                  TextButton(
+                    onPressed: _busy ? null : () => Navigator.pop(context),
+                    child: const Text('Cancel'),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton.icon(
+                    onPressed: _canCreate && !_busy ? _confirm : null,
+                    icon: _busy
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.arrow_forward),
+                    label: const Text('Start grading'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FilePickRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String hint;
+  final String? path;
+  final VoidCallback onTap;
+
+  const _FilePickRow({
+    required this.icon,
+    required this.label,
+    required this.hint,
+    required this.path,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final selected = path != null;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
       child: Material(
-        color: Colors.transparent,
+        color: selected ? const Color(0xFFF0FFF4) : _surface,
+        borderRadius: BorderRadius.circular(6),
         child: InkWell(
-          onTap: onPick,
-          borderRadius: BorderRadius.circular(10),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(6),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: selected ? const Color(0xFFB4E7C2) : _border,
+              ),
+              borderRadius: BorderRadius.circular(6),
+            ),
             child: Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: iconColor.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(icon, color: iconColor, size: 18),
-                ),
+                Icon(icon, color: selected ? _success : _muted),
                 const SizedBox(width: 12),
+                SizedBox(
+                  width: 130,
+                  child: Text(
+                    label,
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: _text,
+                    ),
+                  ),
+                ),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(label,
-                          style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _kTextPrimary)),
-                      Text(
-                        picked ? filename! : hint,
-                        style: GoogleFonts.inter(fontSize: 11, color: picked ? _kAccent : _kTextSecondary),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
+                  child: Text(
+                    selected ? _basename(path!) : hint,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      color: selected ? _muted : _warning,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Icon(
-                  picked ? Icons.check_circle_rounded : Icons.upload_file_rounded,
-                  color: picked ? _kAccent : _kTextSecondary,
-                  size: 20,
+                  selected ? Icons.check_circle_outline : Icons.upload_file,
+                  color: selected ? _success : _muted,
                 ),
               ],
             ),
@@ -801,169 +820,54 @@ class _FileImportRow extends StatelessWidget {
   }
 }
 
-class _Tag extends StatelessWidget {
+class _MetricPanel extends StatelessWidget {
   final String label;
-  final Color color;
-  const _Tag({required this.label, required this.color});
+  final String value;
+
+  const _MetricPanel({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Text(label, style: GoogleFonts.inter(fontSize: 11, color: color, fontWeight: FontWeight.w600)),
-    );
-  }
-}
-
-class _FileChip extends StatelessWidget {
-  final String label;
-  final bool ok;
-  const _FileChip({required this.label, required this.ok});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-      decoration: BoxDecoration(
-        color: ok ? _kSuccess.withValues(alpha: 0.1) : _kBorder.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(5),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+      width: 190,
+      padding: const EdgeInsets.all(16),
+      decoration: _panelDecoration(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(ok ? Icons.check_rounded : Icons.remove_rounded, size: 10,
-              color: ok ? _kSuccess : _kTextSecondary),
-          const SizedBox(width: 3),
-          Text(label, style: GoogleFonts.inter(fontSize: 10, color: ok ? _kSuccess : _kTextSecondary)),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatPill extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-  const _StatPill({required this.icon, required this.label, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.25)),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, size: 14, color: color),
-          const SizedBox(width: 6),
-          Text(label, style: GoogleFonts.inter(fontSize: 12, color: color, fontWeight: FontWeight.w600)),
-        ],
-      ),
-    );
-  }
-}
-
-class _ActionBtn extends StatelessWidget {
-  final IconData icon;
-  final String tooltip;
-  final Color color;
-  final VoidCallback onTap;
-  const _ActionBtn({required this.icon, required this.tooltip, required this.color, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: color.withValues(alpha: 0.2)),
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: _muted,
+            ),
           ),
-          child: Icon(icon, color: color, size: 18),
-        ),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.outfit(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: _text,
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _GradientButton extends StatelessWidget {
-  final VoidCallback onTap;
-  final String label;
-  const _GradientButton({required this.onTap, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(colors: [_kPrimary, Color(0xFF818CF8)]),
-          borderRadius: BorderRadius.circular(30),
-          boxShadow: [BoxShadow(color: _kPrimary.withValues(alpha: 0.35), blurRadius: 16, offset: const Offset(0, 6))],
-        ),
-        child: Text(label, style: GoogleFonts.outfit(fontSize: 15, color: Colors.white, fontWeight: FontWeight.w600)),
-      ),
-    );
-  }
+BoxDecoration _panelDecoration() {
+  return BoxDecoration(
+    color: _surface,
+    border: Border.all(color: _borderSoft),
+    borderRadius: BorderRadius.circular(8),
+  );
 }
 
-class _NewSessionFab extends StatelessWidget {
-  final VoidCallback onTap;
-  const _NewSessionFab({required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 52,
-        padding: const EdgeInsets.symmetric(horizontal: 22),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(colors: [_kPrimary, Color(0xFF818CF8)]),
-          borderRadius: BorderRadius.circular(26),
-          boxShadow: [BoxShadow(color: _kPrimary.withValues(alpha: 0.4), blurRadius: 16, offset: const Offset(0, 6))],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.add_rounded, color: Colors.white, size: 22),
-            const SizedBox(width: 8),
-            Text('Tạo mới', style: GoogleFonts.outfit(fontSize: 15, color: Colors.white, fontWeight: FontWeight.w600)),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _GlowBlob extends StatelessWidget {
-  final Color color;
-  final double size;
-  const _GlowBlob({required this.color, required this.size});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size, height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: RadialGradient(colors: [color, Colors.transparent]),
-      ),
-    );
-  }
+String _basename(String path) {
+  return path.split(Platform.pathSeparator).last;
 }

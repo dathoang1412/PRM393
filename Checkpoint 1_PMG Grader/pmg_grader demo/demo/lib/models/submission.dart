@@ -13,6 +13,7 @@ class Submission {
   String aiComment = "";
   bool hasAiGraded = false;
 
+  bool opened = false;
   bool graded = false;
   ExamType? examType;
 

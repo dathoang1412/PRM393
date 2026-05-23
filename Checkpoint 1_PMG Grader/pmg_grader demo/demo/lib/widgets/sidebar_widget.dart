@@ -6,18 +6,20 @@ class SidebarWidget extends StatelessWidget {
   final List<Submission> submissions;
   final int currentIndex;
   final ValueChanged<int> onSubmissionSelected;
+  final double width;
 
   const SidebarWidget({
     super.key,
     required this.submissions,
     required this.currentIndex,
     required this.onSubmissionSelected,
+    this.width = 280,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 280,
+      width: width,
       decoration: BoxDecoration(
         color: Colors.white,
         border: const Border(
@@ -69,6 +71,7 @@ class SidebarWidget extends StatelessWidget {
               itemBuilder: (context, index) {
                 final sub = submissions[index];
                 final isSelected = index == currentIndex;
+                final status = _submissionStatus(sub);
                 return Container(
                   margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
                   child: ListTile(
@@ -78,10 +81,8 @@ class SidebarWidget extends StatelessWidget {
                       borderRadius: BorderRadius.circular(10),
                     ),
                     leading: Icon(
-                      sub.graded ? Icons.check_circle_rounded : Icons.description_outlined,
-                      color: sub.graded 
-                          ? const Color(0xFF10B981) 
-                          : (isSelected ? const Color(0xFF6366F1) : const Color(0xFF94A3B8)),
+                      status.icon,
+                      color: status.color,
                       size: 20,
                     ),
                     title: Text(
@@ -94,6 +95,16 @@ class SidebarWidget extends StatelessWidget {
                         color: isSelected ? const Color(0xFF4F46E5) : const Color(0xFF334155),
                       ),
                     ),
+                    subtitle: Text(
+                      status.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: status.color,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                     onTap: () => onSubmissionSelected(index),
                   ),
                 );
@@ -104,4 +115,45 @@ class SidebarWidget extends StatelessWidget {
       ),
     );
   }
+
+  _SidebarSubmissionStatus _submissionStatus(Submission submission) {
+    if (submission.graded) {
+      return const _SidebarSubmissionStatus(
+        label: 'Human complete',
+        icon: Icons.check_circle_rounded,
+        color: Color(0xFF1A7F37),
+      );
+    }
+    if (submission.hasAiGraded) {
+      return const _SidebarSubmissionStatus(
+        label: 'AI graded',
+        icon: Icons.smart_toy_rounded,
+        color: Color(0xFF2DA44E),
+      );
+    }
+    if (submission.opened) {
+      return const _SidebarSubmissionStatus(
+        label: 'Clicked - needs review',
+        icon: Icons.pending_rounded,
+        color: Color(0xFFBF8700),
+      );
+    }
+    return const _SidebarSubmissionStatus(
+      label: 'Open',
+      icon: Icons.radio_button_unchecked_rounded,
+      color: Color(0xFF8C959F),
+    );
+  }
+}
+
+class _SidebarSubmissionStatus {
+  final String label;
+  final IconData icon;
+  final Color color;
+
+  const _SidebarSubmissionStatus({
+    required this.label,
+    required this.icon,
+    required this.color,
+  });
 }

@@ -48,13 +48,19 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
   double _submissionSidebarWidth = 280;
 
   GradingCollection? get _collection {
-    if (_collectionIndex < 0 || _collectionIndex >= _collections.length) return null;
+    if (_collectionIndex < 0 || _collectionIndex >= _collections.length) {
+      return null;
+    }
     return _collections[_collectionIndex];
   }
 
   Submission? get _currentSubmission {
     final collection = _collection;
-    if (collection == null || _currentIndex < 0 || _currentIndex >= collection.submissions.length) return null;
+    if (collection == null ||
+        _currentIndex < 0 ||
+        _currentIndex >= collection.submissions.length) {
+      return null;
+    }
     return collection.submissions[_currentIndex];
   }
 
@@ -82,23 +88,33 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
   Future<void> _initializeSession() async {
     setState(() => _isLoading = true);
     try {
-      final progress = await _sessionService.loadSessionProgress(widget.session.id);
+      final progress = await _sessionService.loadSessionProgress(
+        widget.session.id,
+      );
       final collection = _restoreCollection(progress);
 
       if (widget.session.gradingGuideDocPath != null && !collection.hasRubric) {
-        final rubric = await _fileService.extractDocxTextFromPath(widget.session.gradingGuideDocPath!);
+        final rubric = await _fileService.extractDocxTextFromPath(
+          widget.session.gradingGuideDocPath!,
+        );
         if (rubric != null && rubric.trim().isNotEmpty) {
-          collection.applyRubric(_fileNameFromPath(widget.session.gradingGuideDocPath!), rubric);
+          collection.applyRubric(
+            _fileNameFromPath(widget.session.gradingGuideDocPath!),
+            rubric,
+          );
         }
       }
 
-      if (widget.session.studentZipPath != null && collection.submissions.isEmpty) {
+      if (widget.session.studentZipPath != null &&
+          collection.submissions.isEmpty) {
         final extractPath = await _fileService.extractZipFromPath(
           widget.session.studentZipPath!,
           widget.session.id,
         );
         if (extractPath != null) {
-          collection.submissions = _fileService.loadSubmissionsFromFolder(extractPath);
+          collection.submissions = _fileService.loadSubmissionsFromFolder(
+            extractPath,
+          );
           for (final sub in collection.submissions) {
             sub.examType = collection.selectedExamType;
             sub.initScores(collection.selectedExamType);
@@ -115,10 +131,14 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
         final savedIndex = progress?['currentIndex'] as int?;
         _currentIndex = collection.submissions.isEmpty
             ? -1
-            : (savedIndex != null && savedIndex >= 0 && savedIndex < collection.submissions.length)
-                ? savedIndex
-                : 0;
-        _tabIndex = progress?['tabIndex'] as int? ?? (collection.submissions.isEmpty ? 0 : 3);
+            : (savedIndex != null &&
+                  savedIndex >= 0 &&
+                  savedIndex < collection.submissions.length)
+            ? savedIndex
+            : 0;
+        _tabIndex =
+            progress?['tabIndex'] as int? ??
+            (collection.submissions.isEmpty ? 0 : 3);
         if (_currentIndex >= 0) {
           _loadSubmission(_currentIndex);
         } else {
@@ -172,35 +192,46 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
 
     final savedSubmissions = progress?['submissions'] as List<dynamic>?;
     if (savedSubmissions != null) {
-      collection.submissions = savedSubmissions.whereType<Map<String, dynamic>>().map((item) {
-        final sub = Submission(
-          fileName: item['fileName'] as String? ?? '',
-          filePath: item['filePath'] as String? ?? '',
-          content: item['content'] as String? ?? '',
-        );
-        final examCode = item['examTypeCode'] as String?;
-        sub.examType = collection.examTypes.firstWhere(
-          (exam) => exam.code == examCode,
-          orElse: () => collection.selectedExamType,
-        );
-        sub.scores = _doubleList(item['scores']);
-        sub.aiScores = _doubleList(item['aiScores']);
-        sub.aiComments = (item['aiComments'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [];
-        sub.comment = item['comment'] as String? ?? '';
-        sub.aiComment = item['aiComment'] as String? ?? '';
-        sub.hasAiGraded = item['hasAiGraded'] as bool? ?? false;
-        sub.opened = item['opened'] as bool? ?? false;
-        sub.graded = item['graded'] as bool? ?? false;
-        sub.initScores(sub.examType ?? collection.selectedExamType);
-        return sub;
-      }).toList();
+      collection.submissions = savedSubmissions
+          .whereType<Map<String, dynamic>>()
+          .map((item) {
+            final sub = Submission(
+              fileName: item['fileName'] as String? ?? '',
+              filePath: item['filePath'] as String? ?? '',
+              content: item['content'] as String? ?? '',
+            );
+            final examCode = item['examTypeCode'] as String?;
+            sub.examType = collection.examTypes.firstWhere(
+              (exam) => exam.code == examCode,
+              orElse: () => collection.selectedExamType,
+            );
+            sub.scores = _doubleList(item['scores']);
+            sub.aiScores = _doubleList(item['aiScores']);
+            sub.aiComments =
+                (item['aiComments'] as List<dynamic>?)
+                    ?.map((e) => e.toString())
+                    .toList() ??
+                [];
+            sub.comment = item['comment'] as String? ?? '';
+            sub.aiComment = item['aiComment'] as String? ?? '';
+            sub.hasAiGraded = item['hasAiGraded'] as bool? ?? false;
+            sub.opened = item['opened'] as bool? ?? false;
+            sub.graded = item['graded'] as bool? ?? false;
+            sub.initScores(sub.examType ?? collection.selectedExamType);
+            return sub;
+          })
+          .toList();
     }
     collection.touch();
     return collection;
   }
 
   List<double> _doubleList(dynamic value) {
-    return (value as List<dynamic>?)?.whereType<num>().map((e) => e.toDouble()).toList() ?? [];
+    return (value as List<dynamic>?)
+            ?.whereType<num>()
+            .map((e) => e.toDouble())
+            .toList() ??
+        [];
   }
 
   String _fileNameFromPath(String path) {
@@ -209,8 +240,14 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
   }
 
   Future<void> _updateAndSaveSession() async {
-    final totalStudents = _collections.fold<int>(0, (sum, c) => sum + c.totalSubmissions);
-    final gradedCount = _collections.fold<int>(0, (sum, c) => sum + c.reviewedCount);
+    final totalStudents = _collections.fold<int>(
+      0,
+      (sum, c) => sum + c.totalSubmissions,
+    );
+    final gradedCount = _collections.fold<int>(
+      0,
+      (sum, c) => sum + c.reviewedCount,
+    );
     final markerName = _markerController.text.trim();
     final updatedSession = widget.session.copyWith(
       totalStudents: totalStudents,
@@ -238,70 +275,89 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
       },
       'customCriteria': {
         for (final exam in collection.examTypes)
-          exam.code: exam.criteria.map((criterion) => {
-                'name': criterion.name,
-                'maxScore100': criterion.maxScore100,
-              }).toList(),
+          exam.code: exam.criteria
+              .map(
+                (criterion) => {
+                  'name': criterion.name,
+                  'maxScore100': criterion.maxScore100,
+                },
+              )
+              .toList(),
       },
-      'submissions': collection.submissions.map((sub) => {
-            'fileName': sub.fileName,
-            'filePath': sub.filePath,
-            'content': sub.content,
-            'scores': sub.scores,
-            'comment': sub.comment,
-            'aiScores': sub.aiScores,
-            'aiComments': sub.aiComments,
-            'aiComment': sub.aiComment,
-            'hasAiGraded': sub.hasAiGraded,
-            'opened': sub.opened,
-            'graded': sub.graded,
-            'examTypeCode': sub.examType?.code,
-          }).toList(),
+      'submissions': collection.submissions
+          .map(
+            (sub) => {
+              'fileName': sub.fileName,
+              'filePath': sub.filePath,
+              'content': sub.content,
+              'scores': sub.scores,
+              'comment': sub.comment,
+              'aiScores': sub.aiScores,
+              'aiComments': sub.aiComments,
+              'aiComment': sub.aiComment,
+              'hasAiGraded': sub.hasAiGraded,
+              'opened': sub.opened,
+              'graded': sub.graded,
+              'examTypeCode': sub.examType?.code,
+            },
+          )
+          .toList(),
     });
   }
 
   void _showSnackBar(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   void _handleMarkerChanged() {
     _updateAndSaveSession();
   }
 
-  void _createCollection([String? name]) {
-    final nextName = name?.trim().isNotEmpty == true ? name!.trim() : 'Collection ${_collections.length + 1}';
-    final collection = GradingCollection.create(nextName);
+  Future<void> _showCreateCollectionDialog() async {
+    final setup = await showDialog<_CollectionSetup>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => _CreateCollectionSetupDialog(
+        defaultName: 'PMG grading batch ${_collections.length + 1}',
+        fileService: _fileService,
+        extractionId:
+            '${widget.session.id}_collection_${DateTime.now().microsecondsSinceEpoch}',
+      ),
+    );
+    if (setup == null) return;
+
+    final collection = GradingCollection.create(setup.name);
+    if (setup.examFile != null) {
+      collection.applyExam(setup.examFile!.fileName, setup.examFile!.content);
+    }
+    if (setup.rubricFile != null) {
+      collection.applyRubric(
+        setup.rubricFile!.fileName,
+        setup.rubricFile!.content,
+      );
+    }
+    for (final sub in setup.submissions) {
+      sub.examType = collection.selectedExamType;
+      sub.initScores(collection.selectedExamType);
+    }
+    collection.submissions = setup.submissions;
+    collection.touch();
+
     setState(() {
       _collections.add(collection);
       _collectionIndex = _collections.length - 1;
-      _currentIndex = -1;
-      _tabIndex = 0;
-      _clearScoreControllers();
+      _currentIndex = collection.submissions.isEmpty ? -1 : 0;
+      _tabIndex = collection.submissions.isEmpty ? 0 : 3;
+      if (_currentIndex >= 0) {
+        _loadSubmission(_currentIndex);
+      } else {
+        _clearScoreControllers();
+      }
     });
-    _updateAndSaveSession();
-  }
-
-  Future<void> _showCreateCollectionDialog() async {
-    final controller = TextEditingController(text: 'PMG grading batch ${_collections.length + 1}');
-    final name = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('New collection'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(labelText: 'Collection name'),
-          onSubmitted: (value) => Navigator.pop(context, value),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          ElevatedButton(onPressed: () => Navigator.pop(context, controller.text), child: const Text('Create')),
-        ],
-      ),
-    );
-    controller.dispose();
-    if (name != null) _createCollection(name);
+    await _updateAndSaveSession();
   }
 
   void _selectCollection(int index) {
@@ -334,8 +390,14 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
           onSubmitted: (value) => Navigator.pop(context, value),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          ElevatedButton(onPressed: () => Navigator.pop(context, controller.text), child: const Text('Rename')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, controller.text),
+            child: const Text('Rename'),
+          ),
         ],
       ),
     );
@@ -361,7 +423,10 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
           'This will remove "${collection.name}" from the current workspace. This action cannot be undone.',
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
@@ -459,7 +524,9 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
 
     setState(() => _isLoading = true);
     try {
-      final extractPath = await _fileService.pickAndExtractZip(widget.session.id);
+      final extractPath = await _fileService.pickAndExtractZip(
+        widget.session.id,
+      );
       if (extractPath == null) return;
       final loaded = _fileService.loadSubmissionsFromFolder(extractPath);
       _applySubmissions(loaded);
@@ -522,7 +589,11 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
 
   void _loadSubmission(int index) {
     final collection = _collection;
-    if (collection == null || index < 0 || index >= collection.submissions.length) return;
+    if (collection == null ||
+        index < 0 ||
+        index >= collection.submissions.length) {
+      return;
+    }
 
     final sub = collection.submissions[index];
     sub.opened = true;
@@ -607,7 +678,12 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
       _aiGradingLabel = 'AI is grading ${sub.fileName}';
     });
     try {
-      await _geminiService.gradeSubmission(sub, exam, collection.apiKey, client: _activeAiClient);
+      await _geminiService.gradeSubmission(
+        sub,
+        exam,
+        collection.apiKey,
+        client: _activeAiClient,
+      );
       collection.touch();
       setState(() {
         _aiGradingDone = collection.aiGradedCount;
@@ -644,7 +720,11 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
       return;
     }
 
-    final pending = collection.submissions.asMap().entries.where((entry) => !entry.value.hasAiGraded).toList();
+    final pending = collection.submissions
+        .asMap()
+        .entries
+        .where((entry) => !entry.value.hasAiGraded)
+        .toList();
     if (pending.isEmpty) {
       _showSnackBar('All submissions already have AI results.');
       return;
@@ -684,7 +764,12 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
           });
         }
         final exam = sub.examType ?? collection.selectedExamType;
-        await _geminiService.gradeSubmission(sub, exam, collection.apiKey, client: _activeAiClient);
+        await _geminiService.gradeSubmission(
+          sub,
+          exam,
+          collection.apiKey,
+          client: _activeAiClient,
+        );
         if (mounted) {
           setState(() {
             _aiGradingDone = collection.aiGradedCount;
@@ -703,7 +788,9 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
       } else if (_isAiPaused) {
         _showSnackBar('AI pregrade paused. Resume when ready.');
       } else {
-        _showSnackBar('AI grading completed. Review each AI result and save the final human mark.');
+        _showSnackBar(
+          'AI grading completed. Review each AI result and save the final human mark.',
+        );
       }
     } catch (e) {
       if (_stopAiGrading) {
@@ -757,7 +844,9 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
     setState(() {
       for (var i = 0; i < exam.criteria.length; i++) {
         if (i < sub.aiScores.length && i < _scoreControllers.length) {
-          _scoreControllers[i].text = sub.aiScores[i].clamp(0.0, exam.criteria[i].maxScore10).toString();
+          _scoreControllers[i].text = sub.aiScores[i]
+              .clamp(0.0, exam.criteria[i].maxScore10)
+              .toString();
         }
       }
       _commentController.text = sub.aiComment;
@@ -821,7 +910,10 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
           ElevatedButton(
             onPressed: () {
               setState(() => collection.apiKey = keyController.text.trim());
@@ -846,7 +938,9 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
             children: [
               _buildCollectionSidebar(),
               Expanded(
-                child: collection == null ? _buildNoCollectionState() : _buildCollectionWorkspace(collection),
+                child: collection == null
+                    ? _buildNoCollectionState()
+                    : _buildCollectionWorkspace(collection),
               ),
             ],
           ),
@@ -884,7 +978,11 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
                           color: const Color(0xFF0F172A),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Icon(Icons.fact_check_outlined, color: Colors.white, size: 20),
+                        child: const Icon(
+                          Icons.fact_check_outlined,
+                          color: Colors.white,
+                          size: 20,
+                        ),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
@@ -898,10 +996,14 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
                         ),
                       ),
                       IconButton(
-                        onPressed: _collection == null ? null : () => _showCollectionApiKeyDialog(_collection!),
+                        onPressed: _collection == null
+                            ? null
+                            : () => _showCollectionApiKeyDialog(_collection!),
                         icon: Icon(
                           Icons.key_outlined,
-                          color: _collection == null ? const Color(0xFFD0D7DE) : const Color(0xFF57606A),
+                          color: _collection == null
+                              ? const Color(0xFFD0D7DE)
+                              : const Color(0xFF57606A),
                         ),
                         tooltip: 'Collection API key',
                       ),
@@ -919,7 +1021,9 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
                       foregroundColor: Colors.white,
                       elevation: 0,
                       minimumSize: const Size(double.infinity, 40),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(6),
+                      ),
                     ),
                   ),
                 ),
@@ -928,7 +1032,11 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 18),
                   child: Text(
                     'Collections',
-                    style: GoogleFonts.inter(color: const Color(0xFF57606A), fontSize: 12, fontWeight: FontWeight.w700),
+                    style: GoogleFonts.inter(
+                      color: const Color(0xFF57606A),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -946,11 +1054,15 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
                           selectedTileColor: const Color(0xFFF6F8FA),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(6),
-                            side: selected ? const BorderSide(color: Color(0xFFD0D7DE)) : BorderSide.none,
+                            side: selected
+                                ? const BorderSide(color: Color(0xFFD0D7DE))
+                                : BorderSide.none,
                           ),
                           leading: Icon(
                             Icons.folder_outlined,
-                            color: selected ? const Color(0xFF0969DA) : const Color(0xFF57606A),
+                            color: selected
+                                ? const Color(0xFF0969DA)
+                                : const Color(0xFF57606A),
                             size: 20,
                           ),
                           title: Text(
@@ -960,16 +1072,25 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
                             style: GoogleFonts.inter(
                               color: const Color(0xFF24292F),
                               fontSize: 13,
-                              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                              fontWeight: selected
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
                             ),
                           ),
                           subtitle: Text(
                             '${collection.totalSubmissions} submissions',
-                            style: GoogleFonts.inter(color: const Color(0xFF57606A), fontSize: 11),
+                            style: GoogleFonts.inter(
+                              color: const Color(0xFF57606A),
+                              fontSize: 11,
+                            ),
                           ),
                           trailing: PopupMenuButton<String>(
                             tooltip: 'Collection actions',
-                            icon: const Icon(Icons.more_horiz, size: 18, color: Color(0xFF57606A)),
+                            icon: const Icon(
+                              Icons.more_horiz,
+                              size: 18,
+                              color: Color(0xFF57606A),
+                            ),
                             onSelected: (value) {
                               if (value == 'rename') {
                                 _renameCollection(index);
@@ -982,7 +1103,10 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
                                 value: 'rename',
                                 child: Row(
                                   children: [
-                                    Icon(Icons.drive_file_rename_outline, size: 18),
+                                    Icon(
+                                      Icons.drive_file_rename_outline,
+                                      size: 18,
+                                    ),
                                     SizedBox(width: 8),
                                     Text('Rename'),
                                   ],
@@ -993,9 +1117,18 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
                                 value: 'delete',
                                 child: Row(
                                   children: [
-                                    Icon(Icons.delete_outline, size: 18, color: Color(0xFFCF222E)),
+                                    Icon(
+                                      Icons.delete_outline,
+                                      size: 18,
+                                      color: Color(0xFFCF222E),
+                                    ),
                                     SizedBox(width: 8),
-                                    Text('Delete', style: TextStyle(color: Color(0xFFCF222E))),
+                                    Text(
+                                      'Delete',
+                                      style: TextStyle(
+                                        color: Color(0xFFCF222E),
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
@@ -1017,7 +1150,8 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
             child: _resizeHandle(
               onDrag: (delta) {
                 setState(() {
-                  _collectionSidebarWidth = (_collectionSidebarWidth + delta).clamp(240.0, 480.0);
+                  _collectionSidebarWidth = (_collectionSidebarWidth + delta)
+                      .clamp(240.0, 480.0);
                 });
               },
             ),
@@ -1056,17 +1190,29 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.inventory_2_outlined, size: 68, color: Color(0xFF57606A)),
+            const Icon(
+              Icons.inventory_2_outlined,
+              size: 68,
+              color: Color(0xFF57606A),
+            ),
             const SizedBox(height: 18),
             Text(
               'Create a grading collection',
-              style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.bold, color: const Color(0xFF24292F)),
+              style: GoogleFonts.outfit(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF24292F),
+              ),
             ),
             const SizedBox(height: 8),
             Text(
               'A collection groups one exam file, one rubric, submissions, AI results, teacher review, and export output.',
               textAlign: TextAlign.center,
-              style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF57606A), height: 1.5),
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                color: const Color(0xFF57606A),
+                height: 1.5,
+              ),
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
@@ -1076,8 +1222,13 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF238636),
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 22,
+                  vertical: 14,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(6),
+                ),
               ),
             ),
           ],
@@ -1121,7 +1272,11 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
               Expanded(
                 child: Text(
                   collection.name,
-                  style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: const Color(0xFF24292F)),
+                  style: GoogleFonts.outfit(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF24292F),
+                  ),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -1130,14 +1285,25 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
               OutlinedButton.icon(
                 onPressed: () => _showCollectionApiKeyDialog(collection),
                 icon: Icon(
-                  collection.apiKey.trim().isEmpty ? Icons.key_off_outlined : Icons.key_outlined,
+                  collection.apiKey.trim().isEmpty
+                      ? Icons.key_off_outlined
+                      : Icons.key_outlined,
                   size: 18,
                 ),
-                label: Text(collection.apiKey.trim().isEmpty ? 'Set API key' : 'API key set'),
+                label: Text(
+                  collection.apiKey.trim().isEmpty
+                      ? 'Set API key'
+                      : 'API key set',
+                ),
               ),
               const SizedBox(width: 10),
               ElevatedButton.icon(
-                onPressed: collection.submissions.isEmpty || !_hasAiPending(collection) || _isAiGrading ? null : _gradeAllWithAi,
+                onPressed:
+                    collection.submissions.isEmpty ||
+                        !_hasAiPending(collection) ||
+                        _isAiGrading
+                    ? null
+                    : _gradeAllWithAi,
                 icon: const Icon(Icons.smart_toy_outlined, size: 18),
                 label: Text(_aiPregradeActionLabel(collection)),
                 style: ElevatedButton.styleFrom(
@@ -1211,7 +1377,12 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 12),
               decoration: BoxDecoration(
                 border: Border(
-                  bottom: BorderSide(color: selected ? const Color(0xFFFF7B72) : Colors.transparent, width: 2),
+                  bottom: BorderSide(
+                    color: selected
+                        ? const Color(0xFFFF7B72)
+                        : Colors.transparent,
+                    width: 2,
+                  ),
                 ),
               ),
               alignment: Alignment.center,
@@ -1226,7 +1397,7 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
             ),
           );
         },
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemCount: tabs.length,
       ),
     );
@@ -1244,14 +1415,19 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
             children: [
               _actionPanel(
                 title: 'Exam file',
-                subtitle: collection.examFileName ?? 'Import .docx or .txt exam file',
+                subtitle:
+                    collection.examFileName ?? 'Import .docx or .txt exam file',
                 icon: Icons.description_outlined,
-                actionLabel: collection.hasExam ? 'Replace exam' : 'Import exam',
+                actionLabel: collection.hasExam
+                    ? 'Replace exam'
+                    : 'Import exam',
                 onPressed: _importExamFile,
               ),
               _actionPanel(
                 title: 'Submissions',
-                subtitle: collection.submissions.isEmpty ? 'Import ZIP or folder of .txt files' : '${collection.submissions.length} files ready',
+                subtitle: collection.submissions.isEmpty
+                    ? 'Import ZIP or folder of .txt files'
+                    : '${collection.submissions.length} files ready',
                 icon: Icons.source_outlined,
                 actionLabel: 'Import ZIP',
                 onPressed: _importSubmissionsZip,
@@ -1265,12 +1441,23 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
                     : 'Uses current criteria. Lecturers can still mark manually.',
                 icon: Icons.smart_toy_outlined,
                 actionLabel: _aiPregradeActionLabel(collection),
-                onPressed: collection.submissions.isEmpty || !_hasAiPending(collection) || _isAiGrading ? null : _gradeAllWithAi,
+                onPressed:
+                    collection.submissions.isEmpty ||
+                        !_hasAiPending(collection) ||
+                        _isAiGrading
+                    ? null
+                    : _gradeAllWithAi,
               ),
             ],
           ),
           const SizedBox(height: 24),
-          Text('Recent submissions', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
+          Text(
+            'Recent submissions',
+            style: GoogleFonts.outfit(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           const SizedBox(height: 10),
           _submissionTable(collection, limit: 8),
         ],
@@ -1286,11 +1473,25 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
         children: [
           Row(
             children: [
-              Text('Submissions', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold)),
+              Text(
+                'Submissions',
+                style: GoogleFonts.outfit(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               const Spacer(),
-              OutlinedButton.icon(onPressed: _importSubmissionsFolder, icon: const Icon(Icons.folder_open), label: const Text('Folder')),
+              OutlinedButton.icon(
+                onPressed: _importSubmissionsFolder,
+                icon: const Icon(Icons.folder_open),
+                label: const Text('Folder'),
+              ),
               const SizedBox(width: 8),
-              ElevatedButton.icon(onPressed: _importSubmissionsZip, icon: const Icon(Icons.folder_zip), label: const Text('ZIP')),
+              ElevatedButton.icon(
+                onPressed: _importSubmissionsZip,
+                icon: const Icon(Icons.folder_zip),
+                label: const Text('ZIP'),
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -1323,7 +1524,9 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
                 const SizedBox(height: 14),
                 _actionPanel(
                   title: 'Rubric',
-                  subtitle: collection.rubricFileName ?? 'Optional. AI can use criteria without it.',
+                  subtitle:
+                      collection.rubricFileName ??
+                      'Optional. AI can use criteria without it.',
                   icon: Icons.rule_outlined,
                   actionLabel: 'Import rubric',
                   onPressed: _importRubricFile,
@@ -1344,7 +1547,11 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
                   : SingleChildScrollView(
                       child: SelectableText(
                         preview,
-                        style: GoogleFonts.firaCode(fontSize: 13, height: 1.5, color: const Color(0xFF24292F)),
+                        style: GoogleFonts.firaCode(
+                          fontSize: 13,
+                          height: 1.5,
+                          color: const Color(0xFF24292F),
+                        ),
                       ),
                     ),
             ),
@@ -1370,16 +1577,26 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
           ),
           child: Row(
             children: [
-              const Icon(Icons.edit_note_outlined, size: 20, color: Color(0xFF57606A)),
+              const Icon(
+                Icons.edit_note_outlined,
+                size: 20,
+                color: Color(0xFF57606A),
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   'Manual review is the final marking flow. Optional AI pregrade only prepares suggestions.',
-                  style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF57606A), fontWeight: FontWeight.w500),
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    color: const Color(0xFF57606A),
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
               OutlinedButton.icon(
-                onPressed: !_hasAiPending(collection) || _isAiGrading ? null : _gradeAllWithAi,
+                onPressed: !_hasAiPending(collection) || _isAiGrading
+                    ? null
+                    : _gradeAllWithAi,
                 icon: const Icon(Icons.smart_toy_outlined, size: 16),
                 label: Text(_aiPregradeActionLabel(collection)),
               ),
@@ -1406,7 +1623,8 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
               _resizeHandle(
                 onDrag: (delta) {
                   setState(() {
-                    _submissionSidebarWidth = (_submissionSidebarWidth + delta).clamp(220.0, 460.0);
+                    _submissionSidebarWidth = (_submissionSidebarWidth + delta)
+                        .clamp(220.0, 460.0);
                   });
                 },
               ),
@@ -1427,10 +1645,13 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
                   },
                   onImportDocxRubric: _importRubricFile,
                   onConfigureCriteria: () => _showConfigureCriteriaDialog(
-                    collection.submissions[_currentIndex].examType ?? collection.selectedExamType,
+                    collection.submissions[_currentIndex].examType ??
+                        collection.selectedExamType,
                   ),
                   onPrev: _currentIndex > 0 ? _prevSubmission : null,
-                  onNext: _currentIndex < collection.submissions.length - 1 ? _nextSubmission : null,
+                  onNext: _currentIndex < collection.submissions.length - 1
+                      ? _nextSubmission
+                      : null,
                 ),
               ),
               GradingPanelWidget(
@@ -1464,12 +1685,25 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Export readiness', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold)),
+          Text(
+            'Export readiness',
+            style: GoogleFonts.outfit(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           const SizedBox(height: 14),
           _checkRow(collection.hasExam, 'Exam file imported'),
           _checkRow(collection.submissions.isNotEmpty, 'Submissions imported'),
-          _checkRow(_markerController.text.trim().isNotEmpty, 'Marker name entered'),
-          _checkRow(collection.reviewedCount == collection.totalSubmissions && collection.totalSubmissions > 0, 'All submissions reviewed'),
+          _checkRow(
+            _markerController.text.trim().isNotEmpty,
+            'Marker name entered',
+          ),
+          _checkRow(
+            collection.reviewedCount == collection.totalSubmissions &&
+                collection.totalSubmissions > 0,
+            'All submissions reviewed',
+          ),
           const SizedBox(height: 20),
           ElevatedButton.icon(
             onPressed: _exportData,
@@ -1479,7 +1713,9 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
               backgroundColor: const Color(0xFF238636),
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(6),
+              ),
             ),
           ),
         ],
@@ -1489,8 +1725,12 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
 
   Widget _buildAiGradingProgress() {
     final hasTotal = _aiGradingTotal > 0;
-    final progress = hasTotal ? (_aiGradingDone / _aiGradingTotal).clamp(0.0, 1.0) : null;
-    final countText = hasTotal ? 'Bài $_aiGradingCurrent / $_aiGradingTotal - Done $_aiGradingDone' : '';
+    final progress = hasTotal
+        ? (_aiGradingDone / _aiGradingTotal).clamp(0.0, 1.0)
+        : null;
+    final countText = hasTotal
+        ? 'Bài $_aiGradingCurrent / $_aiGradingTotal - Done $_aiGradingDone'
+        : '';
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
@@ -1511,7 +1751,9 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _aiGradingLabel.isEmpty ? 'AI grading in progress...' : _aiGradingLabel,
+                  _aiGradingLabel.isEmpty
+                      ? 'AI grading in progress...'
+                      : _aiGradingLabel,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.inter(
@@ -1569,7 +1811,9 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
     final hasAnyAiResult = collection.submissions.any((sub) => sub.hasAiGraded);
     final hasPending = _hasAiPending(collection);
     if (hasAnyAiResult && hasPending) return 'Continue AI pregrade';
-    if (!hasPending && collection.submissions.isNotEmpty) return 'AI pregrade done';
+    if (!hasPending && collection.submissions.isNotEmpty) {
+      return 'AI pregrade done';
+    }
     return 'Optional AI pregrade';
   }
 
@@ -1578,7 +1822,9 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
   }
 
   Widget _submissionTable(GradingCollection collection, {int? limit}) {
-    final items = limit == null ? collection.submissions : collection.submissions.take(limit).toList();
+    final items = limit == null
+        ? collection.submissions
+        : collection.submissions.take(limit).toList();
     if (items.isEmpty) return _centerMessage('No submissions imported.');
 
     return Container(
@@ -1587,18 +1833,22 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
       child: ListView.separated(
         shrinkWrap: limit != null,
         itemCount: items.length,
-        separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0xFFD8DEE4)),
+        separatorBuilder: (_, _) =>
+            const Divider(height: 1, color: Color(0xFFD8DEE4)),
         itemBuilder: (context, index) {
           final sub = items[index];
           final realIndex = collection.submissions.indexOf(sub);
           final status = _submissionStatus(sub);
           return ListTile(
-            leading: Icon(
-              status.icon,
-              color: status.color,
+            leading: Icon(status.icon, color: status.color),
+            title: Text(
+              sub.fileName,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
-            title: Text(sub.fileName, maxLines: 1, overflow: TextOverflow.ellipsis),
-            subtitle: Text('AI ${sub.aiTotal.toStringAsFixed(1)} | Teacher ${sub.total.toStringAsFixed(1)}'),
+            subtitle: Text(
+              'AI ${sub.aiTotal.toStringAsFixed(1)} | Teacher ${sub.total.toStringAsFixed(1)}',
+            ),
             trailing: _coloredBadge(status.label, status.color),
             onTap: () {
               _saveCurrentScores();
@@ -1664,18 +1914,34 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
             children: [
               Icon(icon, color: const Color(0xFF57606A)),
               const SizedBox(width: 10),
-              Expanded(child: Text(title, style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.bold))),
+              Expanded(
+                child: Text(
+                  title,
+                  style: GoogleFonts.outfit(
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 8),
-          Text(subtitle, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFF57606A))),
+          Text(
+            subtitle,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Color(0xFF57606A)),
+          ),
           const SizedBox(height: 16),
           Row(
             children: [
               ElevatedButton(onPressed: onPressed, child: Text(actionLabel)),
               if (secondaryLabel != null) ...[
                 const SizedBox(width: 8),
-                OutlinedButton(onPressed: secondaryAction, child: Text(secondaryLabel)),
+                OutlinedButton(
+                  onPressed: secondaryAction,
+                  child: Text(secondaryLabel),
+                ),
               ],
             ],
           ),
@@ -1691,11 +1957,24 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Exam criteria', style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.bold)),
+          Text(
+            'Exam criteria',
+            style: GoogleFonts.outfit(
+              fontSize: 17,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           const SizedBox(height: 10),
           DropdownButtonFormField<ExamType>(
-            value: collection.selectedExamType,
-            items: collection.examTypes.map((exam) => DropdownMenuItem(value: exam, child: Text('Exam ${exam.code}'))).toList(),
+            initialValue: collection.selectedExamType,
+            items: collection.examTypes
+                .map(
+                  (exam) => DropdownMenuItem(
+                    value: exam,
+                    child: Text('Exam ${exam.code}'),
+                  ),
+                )
+                .toList(),
             onChanged: (value) {
               if (value == null) return;
               setState(() {
@@ -1711,7 +1990,8 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
           ),
           const SizedBox(height: 10),
           OutlinedButton.icon(
-            onPressed: () => _showConfigureCriteriaDialog(collection.selectedExamType),
+            onPressed: () =>
+                _showConfigureCriteriaDialog(collection.selectedExamType),
             icon: const Icon(Icons.tune_outlined),
             label: const Text('Configure criteria'),
           ),
@@ -1726,11 +2006,19 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
       child: RichText(
         text: TextSpan(
           text: value,
-          style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFF24292F)),
+          style: GoogleFonts.inter(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: const Color(0xFF24292F),
+          ),
           children: [
             TextSpan(
               text: ' $label',
-              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w500, color: const Color(0xFF57606A)),
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: const Color(0xFF57606A),
+              ),
             ),
           ],
         ),
@@ -1746,7 +2034,14 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
         border: Border.all(color: const Color(0xFF54AEFF)),
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Text(text, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0xFF0969DA))),
+      child: Text(
+        text,
+        style: GoogleFonts.inter(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: const Color(0xFF0969DA),
+        ),
+      ),
     );
   }
 
@@ -1760,7 +2055,11 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
       ),
       child: Text(
         text,
-        style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: color),
+        style: GoogleFonts.inter(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: color,
+        ),
       ),
     );
   }
@@ -1770,7 +2069,10 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         children: [
-          Icon(ok ? Icons.check_circle_outline : Icons.error_outline, color: ok ? const Color(0xFF1A7F37) : const Color(0xFF9A6700)),
+          Icon(
+            ok ? Icons.check_circle_outline : Icons.error_outline,
+            color: ok ? const Color(0xFF1A7F37) : const Color(0xFF9A6700),
+          ),
           const SizedBox(width: 10),
           Text(text, style: GoogleFonts.inter(fontSize: 14)),
         ],
@@ -1780,7 +2082,10 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
 
   Widget _centerMessage(String message) {
     return Center(
-      child: Text(message, style: GoogleFonts.inter(color: const Color(0xFF57606A))),
+      child: Text(
+        message,
+        style: GoogleFonts.inter(color: const Color(0xFF57606A)),
+      ),
     );
   }
 
@@ -1802,6 +2107,268 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
   }
 }
 
+class _CollectionSetup {
+  final String name;
+  final PickedTextFile? examFile;
+  final PickedTextFile? rubricFile;
+  final List<Submission> submissions;
+
+  const _CollectionSetup({
+    required this.name,
+    required this.examFile,
+    required this.rubricFile,
+    required this.submissions,
+  });
+}
+
+class _CreateCollectionSetupDialog extends StatefulWidget {
+  final String defaultName;
+  final FileService fileService;
+  final String extractionId;
+
+  const _CreateCollectionSetupDialog({
+    required this.defaultName,
+    required this.fileService,
+    required this.extractionId,
+  });
+
+  @override
+  State<_CreateCollectionSetupDialog> createState() =>
+      _CreateCollectionSetupDialogState();
+}
+
+class _CreateCollectionSetupDialogState
+    extends State<_CreateCollectionSetupDialog> {
+  late final TextEditingController _nameController;
+  PickedTextFile? _examFile;
+  PickedTextFile? _rubricFile;
+  List<Submission> _submissions = [];
+  bool _busy = false;
+
+  bool get _canCreate =>
+      _examFile != null && _rubricFile != null && _submissions.isNotEmpty;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.defaultName);
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickExamFile() async {
+    setState(() => _busy = true);
+    try {
+      final file = await widget.fileService.pickAndReadTextDocument(
+        extensions: ['docx', 'txt'],
+        dialogTitle: 'Import exam file',
+      );
+      if (file != null && mounted) {
+        setState(() => _examFile = file);
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _pickRubricFile() async {
+    setState(() => _busy = true);
+    try {
+      final file = await widget.fileService.pickAndReadTextDocument(
+        extensions: ['docx', 'txt'],
+        dialogTitle: 'Import rubric grading file',
+      );
+      if (file != null && mounted) {
+        setState(() => _rubricFile = file);
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _pickSubmissionsZip() async {
+    setState(() => _busy = true);
+    try {
+      final extractPath = await widget.fileService.pickAndExtractZip(
+        widget.extractionId,
+      );
+      if (extractPath == null) return;
+      final submissions = widget.fileService.loadSubmissionsFromFolder(
+        extractPath,
+      );
+      if (mounted) {
+        setState(() => _submissions = submissions);
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  void _submit() {
+    if (!_canCreate || _busy) return;
+    final name = _nameController.text.trim().isEmpty
+        ? widget.defaultName
+        : _nameController.text.trim();
+    Navigator.pop(
+      context,
+      _CollectionSetup(
+        name: name,
+        examFile: _examFile,
+        rubricFile: _rubricFile,
+        submissions: _submissions,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Prepare collection'),
+      content: SizedBox(
+        width: 620,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextField(
+              controller: _nameController,
+              decoration: const InputDecoration(
+                labelText: 'Collection name',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+            ),
+            const SizedBox(height: 14),
+            _SetupFileRow(
+              icon: Icons.assignment_outlined,
+              title: 'Exam file',
+              subtitle: _examFile?.fileName ?? 'Select .docx or .txt',
+              selected: _examFile != null,
+              onPressed: _busy ? null : _pickExamFile,
+            ),
+            const SizedBox(height: 10),
+            _SetupFileRow(
+              icon: Icons.fact_check_outlined,
+              title: 'Rubric grading file',
+              subtitle: _rubricFile?.fileName ?? 'Select .docx or .txt',
+              selected: _rubricFile != null,
+              onPressed: _busy ? null : _pickRubricFile,
+            ),
+            const SizedBox(height: 10),
+            _SetupFileRow(
+              icon: Icons.folder_zip_outlined,
+              title: 'Student submissions',
+              subtitle: _submissions.isEmpty
+                  ? 'Select .zip'
+                  : '${_submissions.length} submissions loaded',
+              selected: _submissions.isNotEmpty,
+              onPressed: _busy ? null : _pickSubmissionsZip,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              _canCreate
+                  ? 'Ready to create this collection.'
+                  : 'Exam file, rubric grading file, and submissions are required.',
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: _canCreate
+                    ? const Color(0xFF1A7F37)
+                    : const Color(0xFF9A6700),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _busy ? null : () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton.icon(
+          onPressed: _canCreate && !_busy ? _submit : null,
+          icon: _busy
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.add),
+          label: const Text('Create collection'),
+        ),
+      ],
+    );
+  }
+}
+
+class _SetupFileRow extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool selected;
+  final VoidCallback? onPressed;
+
+  const _SetupFileRow({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.selected,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = selected ? const Color(0xFF1A7F37) : const Color(0xFF57606A);
+    return OutlinedButton(
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        alignment: Alignment.centerLeft,
+        padding: const EdgeInsets.all(14),
+        side: BorderSide(
+          color: selected ? const Color(0xFFB4E7C2) : const Color(0xFFD0D7DE),
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF24292F),
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(fontSize: 12, color: color),
+                ),
+              ],
+            ),
+          ),
+          Icon(
+            selected ? Icons.check_circle_outline : Icons.upload_file,
+            color: color,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _SubmissionStatus {
   final String label;
   final IconData icon;
@@ -1820,7 +2387,8 @@ class _ConfigureCriteriaDialog extends StatefulWidget {
   const _ConfigureCriteriaDialog({required this.exam});
 
   @override
-  State<_ConfigureCriteriaDialog> createState() => _ConfigureCriteriaDialogState();
+  State<_ConfigureCriteriaDialog> createState() =>
+      _ConfigureCriteriaDialogState();
 }
 
 class _ConfigureCriteriaDialogState extends State<_ConfigureCriteriaDialog> {
@@ -1830,8 +2398,12 @@ class _ConfigureCriteriaDialogState extends State<_ConfigureCriteriaDialog> {
   @override
   void initState() {
     super.initState();
-    _nameControllers = widget.exam.criteria.map((c) => TextEditingController(text: c.name)).toList();
-    _scoreControllers = widget.exam.criteria.map((c) => TextEditingController(text: c.maxScore100.toString())).toList();
+    _nameControllers = widget.exam.criteria
+        .map((c) => TextEditingController(text: c.name))
+        .toList();
+    _scoreControllers = widget.exam.criteria
+        .map((c) => TextEditingController(text: c.maxScore100.toString()))
+        .toList();
   }
 
   @override
@@ -1845,11 +2417,16 @@ class _ConfigureCriteriaDialogState extends State<_ConfigureCriteriaDialog> {
     super.dispose();
   }
 
-  double get _total => _scoreControllers.fold(0.0, (sum, controller) => sum + (double.tryParse(controller.text) ?? 0.0));
+  double get _total => _scoreControllers.fold(
+    0.0,
+    (sum, controller) => sum + (double.tryParse(controller.text) ?? 0.0),
+  );
 
   void _addCriterion() {
     setState(() {
-      _nameControllers.add(TextEditingController(text: 'Question ${_nameControllers.length + 1}'));
+      _nameControllers.add(
+        TextEditingController(text: 'Question ${_nameControllers.length + 1}'),
+      );
       _scoreControllers.add(TextEditingController(text: '10'));
     });
   }
@@ -1881,7 +2458,10 @@ class _ConfigureCriteriaDialogState extends State<_ConfigureCriteriaDialog> {
                         flex: 3,
                         child: TextField(
                           controller: _nameControllers[index],
-                          decoration: const InputDecoration(labelText: 'Name', isDense: true),
+                          decoration: const InputDecoration(
+                            labelText: 'Name',
+                            isDense: true,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -1889,14 +2469,22 @@ class _ConfigureCriteriaDialogState extends State<_ConfigureCriteriaDialog> {
                         flex: 2,
                         child: TextField(
                           controller: _scoreControllers[index],
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          decoration: const InputDecoration(labelText: 'Points /100', isDense: true),
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          decoration: const InputDecoration(
+                            labelText: 'Points /100',
+                            isDense: true,
+                          ),
                           onChanged: (_) => setState(() {}),
                         ),
                       ),
                       IconButton(
                         onPressed: () => _deleteCriterion(index),
-                        icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                        icon: const Icon(
+                          Icons.delete_outline,
+                          color: Colors.redAccent,
+                        ),
                       ),
                     ],
                   ),
@@ -1906,7 +2494,11 @@ class _ConfigureCriteriaDialogState extends State<_ConfigureCriteriaDialog> {
             const Divider(),
             Row(
               children: [
-                TextButton.icon(onPressed: _addCriterion, icon: const Icon(Icons.add), label: const Text('Add criterion')),
+                TextButton.icon(
+                  onPressed: _addCriterion,
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add criterion'),
+                ),
                 const Spacer(),
                 Text('Total: ${_total.toStringAsFixed(1)}/100'),
               ],
@@ -1915,14 +2507,22 @@ class _ConfigureCriteriaDialogState extends State<_ConfigureCriteriaDialog> {
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
         ElevatedButton(
           onPressed: () {
             final criteria = <Criterion>[];
             for (var i = 0; i < _nameControllers.length; i++) {
               final name = _nameControllers[i].text.trim();
               final score = double.tryParse(_scoreControllers[i].text) ?? 0.0;
-              criteria.add(Criterion(name.isEmpty ? 'Question ${i + 1}' : name, score.clamp(0.0, 100.0).toDouble()));
+              criteria.add(
+                Criterion(
+                  name.isEmpty ? 'Question ${i + 1}' : name,
+                  score.clamp(0.0, 100.0).toDouble(),
+                ),
+              );
             }
             Navigator.pop(context, criteria);
           },

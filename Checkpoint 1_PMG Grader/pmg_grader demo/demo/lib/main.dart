@@ -18,10 +18,11 @@ class GraderApp extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF6C63FF),
-          brightness: Brightness.dark,
+          seedColor: const Color(0xFF0969DA),
+          brightness: Brightness.light,
         ),
-        textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme),
+        scaffoldBackgroundColor: const Color(0xFFF6F8FA),
+        textTheme: GoogleFonts.interTextTheme(ThemeData.light().textTheme),
       ),
       home: const HomeScreen(),
     );

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../models/submission.dart';
 
 class AppBarWidget extends StatelessWidget {
   final TextEditingController markerController;
@@ -7,6 +8,7 @@ class AppBarWidget extends StatelessWidget {
   final VoidCallback onExportExcel;
   final VoidCallback onShowSettings;
   final bool hasSubmissions;
+  final Submission? currentSubmission;
 
   const AppBarWidget({
     super.key,
@@ -15,6 +17,7 @@ class AppBarWidget extends StatelessWidget {
     required this.onExportExcel,
     required this.onShowSettings,
     required this.hasSubmissions,
+    this.currentSubmission,
   });
 
   @override
@@ -61,37 +64,35 @@ class AppBarWidget extends StatelessWidget {
             ),
           ),
           const Spacer(),
-          // Marker Name Input Field
+          // Current Marker Display
           Container(
             width: 240,
             height: 40,
             margin: const EdgeInsets.only(right: 16),
-            child: TextField(
-              controller: markerController,
-              decoration: InputDecoration(
-                hintText: 'Nhập tên người chấm...',
-                prefixIcon: const Icon(Icons.person_rounded, size: 18, color: Color(0xFF6366F1)),
-                contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
-                filled: true,
-                fillColor: const Color(0xFFF8FAFC),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(20),
-                  borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.person_rounded, size: 18, color: Color(0xFF6366F1)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    currentSubmission?.marker ?? (markerController.text.isNotEmpty 
+                        ? markerController.text 
+                        : 'Chưa có người chấm'),
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF1E293B),
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(20),
-                  borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(20),
-                  borderSide: const BorderSide(color: Color(0xFF6366F1), width: 1.5),
-                ),
-              ),
-              style: GoogleFonts.inter(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF1E293B),
-              ),
+              ],
             ),
           ),
           IconButton(

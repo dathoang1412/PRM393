@@ -15,6 +15,7 @@ class Submission {
 
   bool graded = false;
   ExamType? examType;
+  String? marker; // Marker assigned to this submission
 
   Submission({
     required this.fileName,

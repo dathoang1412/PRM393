@@ -17,7 +17,7 @@ class SidebarWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 280,
+      width: 220,
       decoration: BoxDecoration(
         color: Colors.white,
         border: const Border(

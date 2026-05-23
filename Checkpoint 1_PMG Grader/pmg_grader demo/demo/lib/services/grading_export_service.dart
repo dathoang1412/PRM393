@@ -37,63 +37,77 @@ class GradingExportService {
       horizontalAlign: excel_pkg.HorizontalAlign.Center,
     );
 
-    // Row 0 (First row): Question 1, 2, ... N, Total
+    // Row 0 (First row): STT, Empty, Empty, Question 1, 2, ... N, Total, Comment
+    var sttHeaderCell = sheetObject.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 0));
+    sttHeaderCell.value = excel_pkg.TextCellValue('STT');
+    sttHeaderCell.cellStyle = headerStyle;
+    
     for (int i = 0; i < n; i++) {
-      var cell = sheetObject.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: i + 2, rowIndex: 0));
+      var cell = sheetObject.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: i + 3, rowIndex: 0));
       cell.value = excel_pkg.TextCellValue('Question ${i + 1}');
       cell.cellStyle = headerStyle;
     }
-    var totalHeaderCell = sheetObject.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: n + 2, rowIndex: 0));
+    var totalHeaderCell = sheetObject.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: n + 3, rowIndex: 0));
     totalHeaderCell.value = excel_pkg.TextCellValue('Total');
     totalHeaderCell.cellStyle = headerStyle;
 
-    // Row 1 (Second row): Alias, Marker, max scores, total max score, Comment
-    var aliasCell = sheetObject.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 1));
+    var commentHeaderCell = sheetObject.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: n + 4, rowIndex: 0));
+    commentHeaderCell.value = excel_pkg.TextCellValue('Comment');
+    commentHeaderCell.cellStyle = commentStyle;
+
+    // Row 1 (Second row): Empty, Alias, Marker, max scores, total max score, Empty
+    var emptyCell = sheetObject.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 1));
+    emptyCell.value = excel_pkg.TextCellValue('');
+    
+    var aliasCell = sheetObject.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: 1));
     aliasCell.value = excel_pkg.TextCellValue('Alias');
     aliasCell.cellStyle = headerStyle;
 
-    var markerCell = sheetObject.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: 1));
+    var markerCell = sheetObject.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: 1));
     markerCell.value = excel_pkg.TextCellValue('Marker');
     markerCell.cellStyle = headerStyle;
 
     for (int i = 0; i < n; i++) {
-      var cell = sheetObject.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: i + 2, rowIndex: 1));
+      var cell = sheetObject.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: i + 3, rowIndex: 1));
       cell.value = excel_pkg.DoubleCellValue(exam.criteria[i].maxScore10);
       cell.cellStyle = headerStyle;
     }
 
-    var totalMaxCell = sheetObject.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: n + 2, rowIndex: 1));
+    var totalMaxCell = sheetObject.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: n + 3, rowIndex: 1));
     totalMaxCell.value = excel_pkg.DoubleCellValue(exam.totalMaxScore10);
     totalMaxCell.cellStyle = totalStyle; // blue bold text on peach background
-
-    var commentCell = sheetObject.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: n + 3, rowIndex: 1));
-    commentCell.value = excel_pkg.TextCellValue('Comment');
-    commentCell.cellStyle = commentStyle;
 
     // Row 2 onwards: Submissions
     for (int rowIndex = 0; rowIndex < submissions.length; rowIndex++) {
       final sub = submissions[rowIndex];
       sub.initScores(exam);
 
-      // Alias (1-based index)
-      var aliasValCell = sheetObject.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: rowIndex + 2));
-      aliasValCell.value = excel_pkg.IntCellValue(rowIndex + 1);
+      // STT - sequential number
+      var sttValCell = sheetObject.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: rowIndex + 2));
+      sttValCell.value = excel_pkg.TextCellValue((rowIndex + 1).toString());
+      sttValCell.cellStyle = textCenterStyle;
+
+      // Alias - extract from filename
+      final alias = _extractAliasFromFileName(sub.fileName);
+      var aliasValCell = sheetObject.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: rowIndex + 2));
+      aliasValCell.value = excel_pkg.TextCellValue(alias);
       aliasValCell.cellStyle = textCenterStyle;
 
-      // Marker Name
-      var markerValCell = sheetObject.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: rowIndex + 2));
-      markerValCell.value = excel_pkg.TextCellValue(markerName);
+      // Marker Name - use individual submission marker or fallback to default markerName
+      final submissionMarker = sub.marker ?? markerName;
+      var markerValCell = sheetObject.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: rowIndex + 2));
+      markerValCell.value = excel_pkg.TextCellValue(submissionMarker);
       markerValCell.cellStyle = textCenterStyle;
 
       // Individual Question Scores
       for (int i = 0; i < n; i++) {
-        var scoreCell = sheetObject.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: i + 2, rowIndex: rowIndex + 2));
+        var scoreCell = sheetObject.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: i + 3, rowIndex: rowIndex + 2));
         scoreCell.value = excel_pkg.DoubleCellValue(sub.scores[i]);
         scoreCell.cellStyle = textCenterStyle;
       }
 
       // Total
-      var totalValCell = sheetObject.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: n + 2, rowIndex: rowIndex + 2));
+      var totalValCell = sheetObject.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: n + 3, rowIndex: rowIndex + 2));
       totalValCell.value = excel_pkg.DoubleCellValue(sub.total);
       totalValCell.cellStyle = excel_pkg.CellStyle(
         horizontalAlign: excel_pkg.HorizontalAlign.Center,
@@ -102,7 +116,7 @@ class GradingExportService {
       );
 
       // Comment
-      var commentValCell = sheetObject.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: n + 3, rowIndex: rowIndex + 2));
+      var commentValCell = sheetObject.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: n + 4, rowIndex: rowIndex + 2));
       commentValCell.value = excel_pkg.TextCellValue(sub.comment);
     }
 
@@ -123,5 +137,19 @@ class GradingExportService {
         await file.writeAsBytes(bytes);
       }
     }
+  }
+
+  String _extractAliasFromFileName(String fileName) {
+    // Try to extract numeric alias from filename (e.g., "1.txt", "submission_2.txt", etc.)
+    final nameWithoutExt = fileName.replaceAll(RegExp(r'\.[^.]+$'), ''); // Remove extension
+    final numbers = RegExp(r'\d+').allMatches(nameWithoutExt).map((m) => m.group(0)!).toList();
+    
+    if (numbers.isNotEmpty) {
+      // Return the first number found as string
+      return numbers.first;
+    }
+    
+    // If no numbers found, try to match the filename directly as alias
+    return nameWithoutExt.trim();
   }
 }

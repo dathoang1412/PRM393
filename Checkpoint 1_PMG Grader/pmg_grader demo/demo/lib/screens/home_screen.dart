@@ -7,15 +7,15 @@ import '../services/file_service.dart';
 import 'main_screen.dart';
 
 // ─── Colour tokens ────────────────────────────────────────────────────────────
-const _kBg = Color(0xFF0F1117);
-const _kSurface = Color(0xFF1A1D27);
-const _kCard = Color(0xFF20243A);
-const _kBorder = Color(0xFF2E3350);
+const _kBg = Color(0xFFF8FAFC);
+const _kSurface = Color(0xFFFFFFFF);
+const _kCard = Color(0xFFFFFFFF);
+const _kBorder = Color(0xFFE2E8F0);
 const _kPrimary = Color(0xFF6C63FF);
 const _kPrimaryLight = Color(0xFF9D97FF);
 const _kAccent = Color(0xFF00D4AA);
-const _kTextPrimary = Color(0xFFF0F2FF);
-const _kTextSecondary = Color(0xFF8B8FA8);
+const _kTextPrimary = Color(0xFF1E293B);
+const _kTextSecondary = Color(0xFF64748B);
 const _kSuccess = Color(0xFF22C55E);
 const _kWarning = Color(0xFFF59E0B);
 
@@ -27,26 +27,15 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
+class _HomeScreenState extends State<HomeScreen> {
   final SessionService _sessionService = SessionService();
   List<GradingSession> _sessions = [];
   bool _loading = true;
-  late AnimationController _fabAnim;
 
   @override
   void initState() {
     super.initState();
-    _fabAnim = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-    )..forward();
     _loadSessions();
-  }
-
-  @override
-  void dispose() {
-    _fabAnim.dispose();
-    super.dispose();
   }
 
   Future<void> _loadSessions() async {
@@ -56,11 +45,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   void _openSession(GradingSession session) async {
     await Navigator.of(context).push(
-      PageRouteBuilder(
-        pageBuilder: (_, a, b) => MainGradingScreen(session: session),
-        transitionsBuilder: (context, anim, secondaryAnim, child) => FadeTransition(opacity: anim, child: child),
-        transitionDuration: const Duration(milliseconds: 300),
-      ),
+      MaterialPageRoute(builder: (_) => MainGradingScreen(session: session)),
     );
     _loadSessions();
   }
@@ -116,10 +101,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           ),
         ],
       ),
-      floatingActionButton: ScaleTransition(
-        scale: CurvedAnimation(parent: _fabAnim, curve: Curves.elasticOut),
-        child: _NewSessionFab(onTap: _createNewSession),
-      ),
+      floatingActionButton: _NewSessionFab(onTap: _createNewSession),
     );
   }
 
@@ -164,7 +146,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             const SizedBox(width: 12),
             _StatPill(
               icon: Icons.check_circle_outline_rounded,
-              label: '${_sessions.where((s) => s.gradedCount > 0).length} đang dở',
+              label: '${_sessions.where((s) => s.gradedCount > 0).length} đang chấm',
               color: _kAccent,
             ),
           ]
@@ -211,7 +193,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(32, 28, 32, 16),
-          child: Text('Phiên đang chấm dở',
+          child: Text('Phiên đang chấm',
               style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w700, color: _kTextPrimary)),
         ),
         Expanded(
@@ -305,10 +287,6 @@ class _SessionCardState extends State<_SessionCard> {
                                 style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w600, color: _kTextPrimary),
                                 overflow: TextOverflow.ellipsis),
                           ),
-                          if (s.examCode != null) ...[
-                            const SizedBox(width: 8),
-                            _Tag(label: 'Mã đề ${s.examCode}', color: _kAccent),
-                          ],
                         ],
                       ),
                       const SizedBox(height: 6),
@@ -416,7 +394,7 @@ class _ImportFilesDialogState extends State<_ImportFilesDialog> {
   bool _busy = false;
 
   bool get _canProceed =>
-      _docPath != null && _xlsxPath != null && _pngPath != null && _zipPath != null;
+      _docPath != null && _xlsxPath != null && _zipPath != null;
 
   Future<void> _pick(String ext, void Function(String) onPicked) async {
     final r = await FilePicker.pickFiles(
@@ -425,6 +403,16 @@ class _ImportFilesDialogState extends State<_ImportFilesDialog> {
     );
     if (r != null && r.files.single.path != null) {
       onPicked(r.files.single.path!);
+    }
+  }
+
+  Future<void> _pickImage() async {
+    final r = await FilePicker.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['jpg', 'jpeg', 'png'],
+    );
+    if (r != null && r.files.single.path != null) {
+      setState(() => _pngPath = r.files.single.path!);
     }
   }
 
@@ -442,18 +430,13 @@ class _ImportFilesDialogState extends State<_ImportFilesDialog> {
       markInputXlsxPath: _xlsxPath,
       examImagePath: _pngPath,
       studentZipPath: _zipPath,
-      examCode: _pngPath != null ? _extractExamCode(_pngPath!) : null,
+      examCode: null,
       markerName: extractedMarker,
     );
     widget.onConfirm(session);
   }
 
-  String? _extractExamCode(String path) {
-    final name = path.split(RegExp(r'[/\\]')).last;
-    final match = RegExp(r'(\d+)').firstMatch(name);
-    return match?.group(1);
-  }
-
+  
   @override
   void dispose() {
     _nameCtrl.dispose();
@@ -579,12 +562,12 @@ class _ImportFilesDialogState extends State<_ImportFilesDialog> {
                   const SizedBox(height: 10),
                   _FileImportRow(
                     icon: Icons.image_outlined,
-                    iconColor: const Color(0xFFFBBF24),
-                    label: 'Đề thi',
-                    hint: 'File .png ảnh mã đề',
+                    iconColor: const Color(0xFF8B5CF6),
+                    label: 'Đề bài',
+                    hint: 'File ảnh đề bài (.jpg, .png)',
                     ext: 'png',
                     filePath: _pngPath,
-                    onPick: () => _pick('png', (p) => setState(() => _pngPath = p)),
+                    onPick: () => _pickImage(),
                   ),
                   const SizedBox(height: 10),
                   _FileImportRow(
@@ -619,8 +602,8 @@ class _ImportFilesDialogState extends State<_ImportFilesDialog> {
                   const SizedBox(height: 8),
                   Text(
                     _canProceed
-                        ? '✓ Đã chọn đủ 4 files — sẵn sàng bắt đầu!'
-                        : '${[_docPath, _xlsxPath, _pngPath, _zipPath].where((p) => p != null).length}/4 files đã chọn',
+                        ? '✓ Đã chọn đủ 3 files bắt buộc — sẵn sàng bắt đầu!'
+                        : '${[_docPath, _xlsxPath, _pngPath, _zipPath].where((p) => p != null).length}/4 files đã chọn (3 bắt buộc + 1 tùy chọn)',
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       color: _canProceed ? _kAccent : _kTextSecondary,

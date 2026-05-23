@@ -124,6 +124,20 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
             }
           }
 
+          // 4.5. Load Alias-Marker mappings and assign markers to submissions
+          Map<String, String> aliasMarkerMappings = {};
+          if (widget.session.markInputXlsxPath != null) {
+            aliasMarkerMappings = await _fileService.extractAliasMarkerMappings(widget.session.markInputXlsxPath!);
+            
+            // Assign markers to submissions based on filename matching alias
+            for (var submission in loadedSubmissions) {
+              final alias = _extractAliasFromFileName(submission.fileName);
+              if (alias != null && aliasMarkerMappings.containsKey(alias)) {
+                submission.marker = aliasMarkerMappings[alias];
+              }
+            }
+          }
+
           setState(() {
             submissions = loadedSubmissions;
             int savedIndex = progress?['currentIndex'] as int? ?? 0;
@@ -300,8 +314,24 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
     _updateAndSaveSession();
   }
 
+  void _saveScoresWithoutMarking() {
+    if (currentIndex == -1) return;
+    
+    final sub = submissions[currentIndex];
+    final exam = sub.examType ?? selectedGlobalExamType!;
+    sub.initScores(exam);
+
+    for (int i = 0; i < exam.criteria.length; i++) {
+      if (i < _scoreControllers.length) {
+        sub.scores[i] = double.tryParse(_scoreControllers[i].text) ?? 0.0;
+      }
+    }
+    sub.comment = _commentController.text;
+    // Don't set sub.graded = true here
+    _updateAndSaveSession();
+  }
+
   void _nextSubmission() {
-    _saveCurrentScores();
     if (currentIndex < submissions.length - 1) {
       setState(() {
         currentIndex++;
@@ -311,13 +341,26 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
   }
 
   void _prevSubmission() {
-    _saveCurrentScores();
     if (currentIndex > 0) {
       setState(() {
         currentIndex--;
         _loadSubmission(currentIndex);
       });
     }
+  }
+
+  String? _extractAliasFromFileName(String fileName) {
+    // Try to extract numeric alias from filename (e.g., "1.txt", "submission_2.txt", etc.)
+    final nameWithoutExt = fileName.replaceAll(RegExp(r'\.[^.]+$'), ''); // Remove extension
+    final numbers = RegExp(r'\d+').allMatches(nameWithoutExt).map((m) => m.group(0)!).toList();
+    
+    if (numbers.isNotEmpty) {
+      // Return the first number found as string
+      return numbers.first;
+    }
+    
+    // If no numbers found, try to match the filename directly as alias
+    return nameWithoutExt.trim();
   }
 
   Future<void> _askAi() async {
@@ -361,7 +404,7 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
         }
       }
       _commentController.text = sub.aiComment;
-      _saveCurrentScores();
+      _saveScoresWithoutMarking();
     });
   }
 
@@ -372,7 +415,7 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
       return;
     }
 
-    _saveCurrentScores();
+    _saveScoresWithoutMarking();
     try {
       await _exportService.exportToExcel(submissions, markerName);
       _showSnackBar('Xuất tệp Excel thành công!');
@@ -466,6 +509,9 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
                 onExportExcel: _exportData,
                 onShowSettings: _showSettingsDialog,
                 hasSubmissions: submissions.isNotEmpty,
+                currentSubmission: currentIndex >= 0 && currentIndex < submissions.length 
+                    ? submissions[currentIndex] 
+                    : null,
               ),
               Expanded(
                 child: submissions.isEmpty
@@ -477,7 +523,7 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
                             submissions: submissions,
                             currentIndex: currentIndex,
                             onSubmissionSelected: (index) {
-                              _saveCurrentScores();
+                              _saveScoresWithoutMarking();
                               setState(() {
                                 currentIndex = index;
                                 _loadSubmission(index);
@@ -500,6 +546,7 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
                               onPrev: currentIndex > 0 ? _prevSubmission : null,
                               onNext: currentIndex < submissions.length - 1 ? _nextSubmission : null,
                               examTypes: sessionExamTypes,
+                              examImagePath: widget.session.examImagePath,
                             ),
                           ),
                           GradingPanelWidget(
@@ -624,7 +671,7 @@ class _ConfigureCriteriaDialogState extends State<_ConfigureCriteriaDialog> {
     final totalSum = _calculateTotalSum();
     return AlertDialog(
       title: Text(
-        'Cấu hình tiêu chí - Mã đề ${widget.exam.code}',
+        'Cấu hình tiêu chí - ${widget.exam.code}',
         style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18),
       ),
       content: SizedBox(

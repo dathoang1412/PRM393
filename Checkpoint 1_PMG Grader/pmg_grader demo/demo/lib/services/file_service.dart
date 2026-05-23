@@ -88,7 +88,21 @@ class FileService {
         ));
       }
     }
-    loadedSubmissions.sort((a, b) => a.fileName.toLowerCase().compareTo(b.fileName.toLowerCase()));
+    loadedSubmissions.sort((a, b) {
+      // Extract numbers from filenames for proper ordering
+      final extractNumber = (String fileName) {
+        final numbers = RegExp(r'\d+').allMatches(fileName).map((m) => m.group(0)!).toList();
+        if (numbers.isNotEmpty) {
+          return int.tryParse(numbers.first) ?? 0;
+        }
+        return 0;
+      };
+      
+      final numA = extractNumber(a.fileName);
+      final numB = extractNumber(b.fileName);
+      
+      return numA.compareTo(numB);
+    });
     return loadedSubmissions;
   }
 
@@ -227,5 +241,64 @@ class FileService {
       // Ignore or log error
     }
     return null;
+  }
+
+  Future<Map<String, String>> extractAliasMarkerMappings(String path) async {
+    final Map<String, String> mappings = {};
+    try {
+      final bytes = File(path).readAsBytesSync();
+      var excel = excel_pkg.Excel.decodeBytes(bytes);
+      for (var table in excel.tables.keys) {
+        var sheet = excel.tables[table];
+        if (sheet == null || sheet.maxRows == 0) continue;
+        
+        // Find column indices for "Alias" and "Marker"
+        int aliasColIndex = -1;
+        int markerColIndex = -1;
+        int headerRow = -1;
+        
+        final searchLimit = sheet.maxRows > 5 ? 5 : sheet.maxRows;
+        for (int r = 0; r < searchLimit; r++) {
+          final row = sheet.rows[r];
+          bool foundAlias = false;
+          bool foundMarker = false;
+          
+          for (int c = 0; c < row.length; c++) {
+            final val = row[c]?.value?.toString().trim().toLowerCase();
+            if (val == 'alias') {
+              aliasColIndex = c;
+              foundAlias = true;
+            } else if (val == 'marker' || val == 'người chấm' || val == 'nguoi cham') {
+              markerColIndex = c;
+              foundMarker = true;
+            }
+          }
+          
+          if (foundAlias && foundMarker) {
+            headerRow = r;
+            break;
+          }
+        }
+        
+        // If both columns found, extract mappings
+        if (aliasColIndex != -1 && markerColIndex != -1 && headerRow != -1) {
+          for (int r = headerRow + 1; r < sheet.maxRows; r++) {
+            final row = sheet.rows[r];
+            if (row.length > (aliasColIndex > markerColIndex ? aliasColIndex : markerColIndex)) {
+              final alias = row[aliasColIndex]?.value?.toString().trim();
+              final marker = row[markerColIndex]?.value?.toString().trim();
+              
+              if (alias != null && alias.isNotEmpty && 
+                  marker != null && marker.isNotEmpty) {
+                mappings[alias] = marker;
+              }
+            }
+          }
+        }
+      }
+    } catch (e) {
+      // Ignore or log error
+    }
+    return mappings;
   }
 }

@@ -512,6 +512,32 @@ class _GradingPanelWidgetState extends State<GradingPanelWidget> {
       key: const ValueKey('assessment_tab'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Marker information
+        if (widget.submission.marker != null) ...[
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEEF2FF),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFC7D2FE)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.person_rounded, size: 16, color: const Color(0xFF6366F1)),
+                const SizedBox(width: 8),
+                Text(
+                  'Người chấm: ${widget.submission.marker}',
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF4F46E5),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
         // Render Human Score input fields dynamically
         ...exam.criteria.asMap().entries.map((entry) {
           final index = entry.key;

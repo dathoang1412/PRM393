@@ -62,6 +62,27 @@ class SidebarWidget extends StatelessWidget {
             ),
           ),
           const Divider(height: 1, color: Color(0xFFF1F5F9)),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: [
+                _countBadge(
+                  submissions.where((s) => s.graded).length,
+                  const Color(0xFF10B981),
+                  const Color(0xFFD1FAE5),
+                  'đã chấm',
+                ),
+                const SizedBox(width: 8),
+                _countBadge(
+                  submissions.where((s) => !s.graded).length,
+                  const Color(0xFF94A3B8),
+                  const Color(0xFFF1F5F9),
+                  'chưa chấm',
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1, color: Color(0xFFF1F5F9)),
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.symmetric(vertical: 8),
@@ -77,13 +98,7 @@ class SidebarWidget extends StatelessWidget {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    leading: Icon(
-                      sub.graded ? Icons.check_circle_rounded : Icons.description_outlined,
-                      color: sub.graded 
-                          ? const Color(0xFF10B981) 
-                          : (isSelected ? const Color(0xFF6366F1) : const Color(0xFF94A3B8)),
-                      size: 20,
-                    ),
+                    leading: _buildStatusIcon(sub, isSelected),
                     title: Text(
                       sub.fileName,
                       maxLines: 1,
@@ -94,6 +109,7 @@ class SidebarWidget extends StatelessWidget {
                         color: isSelected ? const Color(0xFF4F46E5) : const Color(0xFF334155),
                       ),
                     ),
+                    trailing: sub.graded ? _buildScoreBadge(sub.total) : null,
                     onTap: () => onSubmissionSelected(index),
                   ),
                 );
@@ -101,6 +117,53 @@ class SidebarWidget extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildStatusIcon(Submission sub, bool isSelected) {
+    if (sub.graded) {
+      return const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 20);
+    } else {
+      return Icon(
+        Icons.description_outlined,
+        color: isSelected ? const Color(0xFF6366F1) : const Color(0xFF94A3B8),
+        size: 20,
+      );
+    }
+  }
+
+  static Widget _buildScoreBadge(double total) {
+    final isPass = total >= 4.0;
+    final textColor = isPass ? const Color(0xFF065F46) : const Color(0xFF991B1B);
+    final bgColor = isPass ? const Color(0xFFD1FAE5) : const Color(0xFFFFE4E6);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        total.toStringAsFixed(1),
+        style: GoogleFonts.outfit(
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+          color: textColor,
+        ),
+      ),
+    );
+  }
+
+  static Widget _countBadge(int count, Color textColor, Color bgColor, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        '$count $label',
+        style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, color: textColor),
       ),
     );
   }

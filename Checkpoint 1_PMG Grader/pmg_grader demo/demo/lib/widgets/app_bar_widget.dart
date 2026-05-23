@@ -9,6 +9,7 @@ class AppBarWidget extends StatelessWidget {
   final VoidCallback onShowSettings;
   final bool hasSubmissions;
   final Submission? currentSubmission;
+  final String? sessionName;
 
   const AppBarWidget({
     super.key,
@@ -18,6 +19,7 @@ class AppBarWidget extends StatelessWidget {
     required this.onShowSettings,
     required this.hasSubmissions,
     this.currentSubmission,
+    this.sessionName,
   });
 
   @override
@@ -63,6 +65,31 @@ class AppBarWidget extends StatelessWidget {
               color: const Color(0xFF1E293B),
             ),
           ),
+          if (sessionName != null && sessionName!.isNotEmpty) ...[
+            const SizedBox(width: 16),
+            Container(
+              height: 20,
+              width: 1,
+              color: const Color(0xFFE2E8F0),
+            ),
+            const SizedBox(width: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEEF2FF),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: const Color(0xFFC7D2FE)),
+              ),
+              child: Text(
+                sessionName!,
+                style: GoogleFonts.outfit(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF4F46E5),
+                ),
+              ),
+            ),
+          ],
           const Spacer(),
           // Current Marker Display
           Container(

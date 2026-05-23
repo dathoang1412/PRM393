@@ -22,44 +22,48 @@ class GeminiService {
     String rubricsPrompt = '';
     final int n = exam.criteria.length;
     
+    final criteriaList = exam.criteria.asMap().entries
+        .map((e) => '${e.key + 1}. ${e.value.name} (Max: ${e.value.maxScore10} điểm)')
+        .join('\n');
+
     if (exam.customRubric != null && exam.customRubric!.isNotEmpty) {
       rubricsPrompt = '''
-You are an expert academic grader. Grade this student's submission strictly based on the following custom grading rubric provided by the teacher (extracted from a Word Document):
+Bạn là giảng viên chấm bài chuyên nghiệp. Hãy chấm bài nộp của sinh viên dựa CHẶT CHẼ theo thang điểm/rubric sau của giáo viên (trích xuất từ tài liệu Word):
 """
 ${exam.customRubric}
 """
-Please analyze the submission and assign scores to $n primary components as outlined in this rubric. Distribute the scores across the criteria.
+Bài nộp được chia thành $n câu/tiêu chí chính:
+$criteriaList
+
+Với MỖI câu/tiêu chí, hãy:
+1. Xác định các tiêu chí con (sub-criteria) trong rubric tương ứng với câu đó
+2. Đánh giá sinh viên theo từng tiêu chí con đó
+3. Ghi nhận xét ngắn gọn theo dạng: "• [tên tiêu chí con]: [đánh giá ngắn]" cho mỗi tiêu chí con
+4. Cho điểm tổng của câu đó (thang 10)
 ''';
     } else {
-      rubricsPrompt = 'You are an expert academic grader. Grade this student\'s submission based on these $n criteria:\n';
-      for (int i = 0; i < n; i++) {
-        rubricsPrompt += '${i + 1}. ${exam.criteria[i].name} (Maximum score: ${exam.criteria[i].maxScore10} points on a 10-point scale)\n';
-      }
+      rubricsPrompt = 'Bạn là giảng viên chấm bài chuyên nghiệp. Chấm bài nộp theo $n tiêu chí sau:\n$criteriaList\n';
     }
 
     final jsonFields = {};
     for (int i = 1; i <= n; i++) {
-      jsonFields['"score$i"'] = '<number (0 to ${exam.criteria[i - 1].maxScore10})>';
-      jsonFields['"comment$i"'] = '<nhận xét tiếng Việt súc tích cho tiêu chí $i>';
+      jsonFields['"score$i"'] = '<số thực (0 đến ${exam.criteria[i - 1].maxScore10})>';
+      jsonFields['"comment$i"'] = '<nhận xét tiếng Việt: liệt kê đánh giá theo từng tiêu chí con, mỗi dòng bắt đầu bằng "• tên tiêu chí: nhận xét">';
     }
 
     final prompt = '''
 $rubricsPrompt
 
-Although the original rubric might be out of 100 points, you MUST evaluate and return the scores scaled to a 10-point scale.
-Here are the criteria and their max scores on a 10-point scale:
-${exam.criteria.asMap().entries.map((e) => '- ${e.value.name}: Max ${e.value.maxScore10} points').join('\n')}
+Điểm PHẢI được quy đổi về thang 10 theo đúng tỷ lệ max score của mỗi câu:
+$criteriaList
 
-For each criterion, assign a score and provide a specific, concise explanation/comment in Vietnamese explaining why the student got this score.
-Also, provide an overall brief summary of the entire submission in the "comment" field.
-
-Submission content:
+Bài nộp của sinh viên:
 ${sub.content}
 
-Return ONLY valid JSON (no markdown block, just the json object):
+Trả về ĐÚNG định dạng JSON hợp lệ (không có markdown, chỉ JSON thuần):
 {
   ${jsonFields.entries.map((e) => '${e.key}: ${e.value}').join(',\n  ')},
-  "comment": "<Nhận xét tổng quan súc tích bằng tiếng Việt>"
+  "comment": "<Nhận xét tổng quan ngắn gọn bằng tiếng Việt>"
 }
 ''';
 

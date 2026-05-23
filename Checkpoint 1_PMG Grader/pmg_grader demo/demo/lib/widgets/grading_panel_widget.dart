@@ -440,18 +440,17 @@ class _GradingPanelWidgetState extends State<GradingPanelWidget> {
             ),
           ),
           const SizedBox(height: 12),
-          // Render AI scores dynamically
+          // Render AI scores dynamically as expandable items
           ...exam.criteria.asMap().entries.map((entry) {
             final index = entry.key;
             final c = entry.value;
             final scoreVal = index < sub.aiScores.length ? sub.aiScores[index] : 0.0;
             final commentVal = index < sub.aiComments.length ? sub.aiComments[index] : "";
-            return _buildAiScoreRow(
+            return _buildAiScoreExpansionTile(
               c.name,
               scoreVal,
               c.maxScore10,
               commentVal,
-              'Đã sao chép nhận xét: "${c.name}"',
             );
           }),
           const Divider(height: 32),
@@ -474,7 +473,10 @@ class _GradingPanelWidgetState extends State<GradingPanelWidget> {
           ),
           const SizedBox(height: 20),
           ElevatedButton.icon(
-            onPressed: widget.onCopyAiToTeacher,
+            onPressed: () {
+              widget.onCopyAiToTeacher();
+              setState(() => _activeTabIndex = 1);
+            },
             icon: const Icon(Icons.copy_rounded, size: 16),
             label: const Text('Áp dụng điểm AI'),
             style: ElevatedButton.styleFrom(
@@ -618,6 +620,136 @@ class _GradingPanelWidgetState extends State<GradingPanelWidget> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildAiScoreExpansionTile(String label, double score, double maxScore, String comment) {
+    // Parse bullet lines: lines starting with "•" are sub-criteria rows, rest is plain text
+    final lines = comment.isNotEmpty
+        ? comment.split('\n').where((l) => l.trim().isNotEmpty).toList()
+        : <String>[];
+    final bulletLines = lines.where((l) => l.trimLeft().startsWith('•')).toList();
+    final otherLines = lines.where((l) => !l.trimLeft().startsWith('•')).toList();
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+          childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+          title: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  label,
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF334155),
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEEF2FF),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '${score.toStringAsFixed(1)} / $maxScore',
+                  style: GoogleFonts.outfit(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF4F46E5),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
+            ],
+          ),
+          children: [
+            if (comment.isEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text(
+                  'Không có nhận xét từ AI cho câu này.',
+                  style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF94A3B8)),
+                ),
+              )
+            else ...[
+              // Sub-criteria bullet rows
+              if (bulletLines.isNotEmpty)
+                ...bulletLines.map((line) {
+                  final content = line.replaceFirst(RegExp(r'^[\s•]+'), '').trim();
+                  final colonIdx = content.indexOf(':');
+                  final subName = colonIdx >= 0 ? content.substring(0, colonIdx).trim() : content;
+                  final subDetail = colonIdx >= 0 ? content.substring(colonIdx + 1).trim() : '';
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          margin: const EdgeInsets.only(top: 3),
+                          width: 6,
+                          height: 6,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF6366F1),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: RichText(
+                            text: TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: subName.isNotEmpty ? '$subName: ' : '',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFF334155),
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: subDetail,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    color: const Color(0xFF475569),
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+              // Non-bullet lines (any leading plain text)
+              if (otherLines.isNotEmpty)
+                Padding(
+                  padding: EdgeInsets.only(top: bulletLines.isNotEmpty ? 6 : 0),
+                  child: Text(
+                    otherLines.join(' '),
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      height: 1.5,
+                      color: const Color(0xFF475569),
+                    ),
+                  ),
+                ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 

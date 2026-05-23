@@ -14,6 +14,7 @@ class Submission {
   bool hasAiGraded = false;
 
   bool graded = false;
+  bool isDirty = false;
   ExamType? examType;
   String? marker; // Marker assigned to this submission
 

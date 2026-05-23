@@ -55,6 +55,13 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
     _markerController.addListener(() {
       _updateAndSaveSession();
     });
+    _commentController.addListener(() {
+      if (currentIndex != -1) {
+        setState(() {
+          submissions[currentIndex].isDirty = true;
+        });
+      }
+    });
     // Start session initialization asynchronously
     WidgetsBinding.instance.addPostFrameCallback((_) => _initializeSession());
   }
@@ -289,7 +296,9 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
       final val = sub.scores[i];
       final ctrl = TextEditingController(text: val.toString());
       ctrl.addListener(() {
-        setState(() {}); // refresh the UI for Total Score calculation
+        setState(() {
+          submissions[index].isDirty = true;
+        });
       });
       _scoreControllers.add(ctrl);
     }
@@ -311,6 +320,7 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
     }
     sub.comment = _commentController.text;
     sub.graded = true;
+    sub.isDirty = false;
     _updateAndSaveSession();
   }
 
@@ -327,6 +337,7 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
       }
     }
     sub.comment = _commentController.text;
+    sub.isDirty = false;
     // Don't set sub.graded = true here
     _updateAndSaveSession();
   }
@@ -512,6 +523,7 @@ class _MainGradingScreenState extends State<MainGradingScreen> {
                 currentSubmission: currentIndex >= 0 && currentIndex < submissions.length 
                     ? submissions[currentIndex] 
                     : null,
+                sessionName: widget.session.name,
               ),
               Expanded(
                 child: submissions.isEmpty

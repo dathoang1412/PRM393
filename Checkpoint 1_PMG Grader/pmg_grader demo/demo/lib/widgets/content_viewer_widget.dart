@@ -365,44 +365,6 @@ class _ContentViewerWidgetState extends State<ContentViewerWidget> with SingleTi
           
           const SizedBox(width: 16),
           
-          // Middle: Exam selection
-          Row(
-            children: [
-              Text(
-                "Đề thi:",
-                style: GoogleFonts.inter(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                  color: const Color(0xFF475569),
-                ),
-              ),
-              const SizedBox(width: 6),
-              DropdownButtonHideUnderline(
-                child: DropdownButton<ExamType>(
-                  value: exam,
-                  items: widget.examTypes
-                      .map((e) => DropdownMenuItem(value: e, child: Text(e.code)))
-                      .toList(),
-                  onChanged: widget.onExamTypeChanged,
-                  style: GoogleFonts.inter(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                    color: const Color(0xFF1E293B),
-                  ),
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.settings_outlined, size: 16, color: Color(0xFF6366F1)),
-                tooltip: "Cấu hình tiêu chí đề thi",
-                onPressed: widget.onConfigureCriteria,
-                constraints: const BoxConstraints(),
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-              ),
-            ],
-          ),
-          
-          const SizedBox(width: 16),
-          
           // Right side: Rubric info
           if (hasCustomRubric)
             Row(

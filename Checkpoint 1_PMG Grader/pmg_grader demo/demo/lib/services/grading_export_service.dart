@@ -1,18 +1,43 @@
 import 'dart:io';
 import 'package:excel/excel.dart' as excel_pkg;
 import 'package:file_picker/file_picker.dart';
+import '../models/grading_collection.dart';
 import '../models/submission.dart';
 import '../models/exam_type.dart';
 
 class GradingExportService {
+  Future<void> exportCollection(GradingCollection collection, String markerName) async {
+    await _export(
+      submissions: collection.submissions,
+      markerName: markerName,
+      exam: collection.selectedExamType,
+      fileName: '${collection.name.replaceAll(RegExp(r'[^A-Za-z0-9_-]+'), '_')}_grading_results.xlsx',
+    );
+    collection.status = CollectionStatus.exported;
+    collection.touch();
+  }
+
   Future<void> exportToExcel(List<Submission> submissions, String markerName) async {
+    if (submissions.isEmpty) return;
+    await _export(
+      submissions: submissions,
+      markerName: markerName,
+      exam: submissions.first.examType ?? defaultExamTypes.first,
+      fileName: 'grading_results.xlsx',
+    );
+  }
+
+  Future<void> _export({
+    required List<Submission> submissions,
+    required String markerName,
+    required ExamType exam,
+    required String fileName,
+  }) async {
     if (submissions.isEmpty) return;
 
     var excel = excel_pkg.Excel.createExcel();
     excel_pkg.Sheet sheetObject = excel['Sheet1'];
 
-    // Find the active exam type from submissions
-    var exam = submissions.first.examType ?? defaultExamTypes.first;
     final int n = exam.criteria.length;
     final headerStyle = excel_pkg.CellStyle(
       backgroundColorHex: excel_pkg.ExcelColor.fromHexString('#FCE4D6'), // soft peach
@@ -110,7 +135,7 @@ class GradingExportService {
     if (bytes != null) {
       String? outputFile = await FilePicker.saveFile(
         dialogTitle: 'Export Excel',
-        fileName: 'grading_results.xlsx',
+        fileName: fileName,
         type: FileType.custom,
         allowedExtensions: ['xlsx'],
       );

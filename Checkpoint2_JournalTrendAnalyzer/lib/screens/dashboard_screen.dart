@@ -45,12 +45,12 @@ class DashboardScreen extends StatelessWidget {
                 builder: (context, constraints) {
                   final isWide = constraints.maxWidth > 600;
                   return GridView.count(
-                    crossAxisCount: isWide ? 3 : 2,
+                    crossAxisCount: 3,
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     mainAxisSpacing: 10,
                     crossAxisSpacing: 10,
-                    childAspectRatio: isWide ? 2.5 : 1.4,
+                    childAspectRatio: isWide ? 2.5 : 0.95,
                     children: [
                       MetricTile(
                         icon: Icons.article_outlined,
@@ -70,31 +70,121 @@ class DashboardScreen extends StatelessWidget {
                         value: summary.mostActiveYear?.toString() ?? 'N/A',
                         iconColor: _colorYear,
                       ),
-                      MetricTile(
-                        icon: Icons.menu_book_outlined,
-                        label: 'Top venue',
-                        value: summary.topJournal?.name ?? 'N/A',
-                        iconColor: _colorVenue,
-                      ),
-                      MetricTile(
-                        icon: Icons.person_outline,
-                        label: 'Top author',
-                        value: summary.topAuthor?.name ?? 'N/A',
-                        iconColor: _colorAuthor,
-                      ),
-                      MetricTile(
-                        icon: Icons.workspace_premium_outlined,
-                        label: 'Top paper',
-                        value: summary.mostInfluentialPaper?.title ?? 'N/A',
-                        iconColor: _colorPaper,
-                      ),
                     ],
                   );
                 },
               ),
               const SizedBox(height: 16),
+              _HighlightsCard(
+                items: [
+                  _HighlightItem(
+                    icon: Icons.menu_book_outlined,
+                    label: 'Top venue',
+                    value: summary.topJournal?.name ?? 'N/A',
+                    color: _colorVenue,
+                  ),
+                  _HighlightItem(
+                    icon: Icons.person_outline,
+                    label: 'Top author',
+                    value: summary.topAuthor?.name ?? 'N/A',
+                    color: _colorAuthor,
+                  ),
+                  _HighlightItem(
+                    icon: Icons.workspace_premium_outlined,
+                    label: 'Top paper',
+                    value: summary.mostInfluentialPaper?.title ?? 'N/A',
+                    color: _colorPaper,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
               _TrendCard(summary: summary),
             ]),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _HighlightItem {
+  const _HighlightItem({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color color;
+}
+
+class _HighlightsCard extends StatelessWidget {
+  const _HighlightsCard({required this.items});
+
+  final List<_HighlightItem> items;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          children: [
+            for (var index = 0; index < items.length; index++) ...[
+              if (index > 0) const Divider(height: 14),
+              _HighlightRow(item: items[index]),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HighlightRow extends StatelessWidget {
+  const _HighlightRow({required this.item});
+
+  final _HighlightItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(7),
+          decoration: BoxDecoration(
+            color: item.color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(7),
+          ),
+          child: Icon(item.icon, size: 16, color: item.color),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                item.label,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: const Color(0xFF64748B),
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                item.value,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      height: 1.25,
+                    ),
+              ),
+            ],
           ),
         ),
       ],

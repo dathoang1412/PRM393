@@ -25,7 +25,8 @@ class AnalyticsCalculator {
   static List<JournalStat> topJournals(List<Publication> publications) {
     final counts = <String, int>{};
     for (final publication in publications) {
-      final name = publication.journalName ?? 'Unknown venue';
+      final name = publication.journalName;
+      if (name == null || name.trim().isEmpty) continue;
       counts[name] = (counts[name] ?? 0) + 1;
     }
     return _rank(counts)

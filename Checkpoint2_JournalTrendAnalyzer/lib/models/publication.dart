@@ -49,20 +49,32 @@ class Publication {
   }
 
   static String? _extractJournalName(Map<String, dynamic> json) {
-    final primaryLocation = json['primary_location'];
-    if (primaryLocation is Map<String, dynamic>) {
-      final source = primaryLocation['source'];
-      if (source is Map<String, dynamic>) {
-        final name = _stringValue(source['display_name']);
-        if (name != null) return name;
-      }
-    }
+    final primaryName = _sourceNameFromLocation(json['primary_location']);
+    if (primaryName != null) return primaryName;
 
     final hostVenue = json['host_venue'];
     if (hostVenue is Map<String, dynamic>) {
       return _stringValue(hostVenue['display_name']);
     }
+
+    final locations = json['locations'];
+    if (locations is List) {
+      for (final location in locations) {
+        final name = _sourceNameFromLocation(location);
+        if (name != null) return name;
+      }
+    }
+
     return null;
+  }
+
+  static String? _sourceNameFromLocation(Object? value) {
+    if (value is! Map<String, dynamic>) return null;
+
+    final source = value['source'];
+    if (source is! Map<String, dynamic>) return null;
+
+    return _stringValue(source['display_name']);
   }
 
   static String? _stringValue(Object? value) {

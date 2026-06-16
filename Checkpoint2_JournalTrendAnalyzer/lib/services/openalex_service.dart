@@ -20,6 +20,8 @@ class OpenAlexService {
     'cited_by_count',
     'authorships',
     'primary_location',
+    'host_venue',
+    'locations',
     'abstract_inverted_index',
   ];
 

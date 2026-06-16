@@ -20,20 +20,20 @@ class MetricTile extends StatelessWidget {
     final color = iconColor ?? Theme.of(context).colorScheme.primary;
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(10),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(7),
               decoration: BoxDecoration(
                 color: color.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(icon, color: color, size: 18),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             Text(
               label,
               maxLines: 1,
@@ -42,7 +42,7 @@ class MetricTile extends StatelessWidget {
                     color: const Color(0xFF64748B),
                   ),
             ),
-            const SizedBox(height: 3),
+            const SizedBox(height: 2),
             Text(
               value,
               maxLines: 2,

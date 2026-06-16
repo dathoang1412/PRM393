@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../models/publication.dart';
 
@@ -10,6 +11,10 @@ class PublicationDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final citationText = NumberFormat.decimalPattern().format(
+      publication.citedByCount,
+    );
+    final authorPreview = _authorPreviewText(publication.authors);
     return Scaffold(
       appBar: AppBar(title: const Text('Publication Details')),
       body: SelectionArea(
@@ -23,22 +28,54 @@ class PublicationDetailScreen extends StatelessWidget {
                 color: Theme.of(context).colorScheme.primary,
               ),
             ),
-            const SizedBox(height: 16),
-            _MetaGrid(publication: publication),
-            const SizedBox(height: 16),
-            _Section(
-              title: 'Authors',
-              child: Text(
-                publication.authors.isEmpty
-                    ? 'Unknown authors'
-                    : publication.authors.join(', '),
+            const SizedBox(height: 10),
+            Text.rich(
+              TextSpan(
+                children: [
+                  const TextSpan(
+                    text: 'Authors: ',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  TextSpan(text: authorPreview),
+                ],
+              ),
+              style: textTheme.bodyMedium?.copyWith(
+                color: const Color(0xFF475569),
+                height: 1.35,
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _InfoChip(
+                  icon: Icons.calendar_today_outlined,
+                  label: publication.publicationYear?.toString() ?? 'Unknown',
+                ),
+                _InfoChip(
+                  icon: Icons.format_quote,
+                  label: '$citationText citations',
+                  color: const Color(0xFFD97706),
+                ),
+                _InfoChip(
+                  icon: Icons.menu_book_outlined,
+                  label: publication.journalName ?? 'Unknown venue',
+                  color: const Color(0xFF7C3AED),
+                  maxWidth: 300,
+                ),
+              ],
+            ),
+            if (publication.doi != null) ...[
+              const SizedBox(height: 12),
+              _DoiRow(doi: publication.doi!),
+            ],
+            const SizedBox(height: 16),
             _Section(
               title: 'Abstract',
               child: Text(
-                publication.abstractText ?? 'No abstract available from OpenAlex.',
+                publication.abstractText ??
+                    'No abstract available from OpenAlex.',
               ),
             ),
           ],
@@ -48,63 +85,80 @@ class PublicationDetailScreen extends StatelessWidget {
   }
 }
 
-class _MetaGrid extends StatelessWidget {
-  const _MetaGrid({required this.publication});
+String _authorPreviewText(List<String> authors) {
+  if (authors.isEmpty) return 'Unknown authors';
+  if (authors.length <= 3) return authors.join(', ');
 
-  final Publication publication;
+  final visibleAuthors = authors.take(3).join(', ');
+  final hiddenCount = authors.length - 3;
+  return '$visibleAuthors, and $hiddenCount more';
+}
+
+class _InfoChip extends StatelessWidget {
+  const _InfoChip({
+    required this.icon,
+    required this.label,
+    this.color = const Color(0xFF2563EB),
+    this.maxWidth = 190,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+  final double maxWidth;
 
   @override
   Widget build(BuildContext context) {
-    final items = [
-      ('Year', publication.publicationYear?.toString() ?? 'Unknown'),
-      ('Citations', publication.citedByCount.toString()),
-      ('Venue', publication.journalName ?? 'Unknown venue'),
-      ('DOI', publication.doi ?? 'Not available'),
-    ];
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final width = constraints.maxWidth;
-        final crossAxisCount = width > 520 ? 2 : 1;
-        return GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: items.length,
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: crossAxisCount,
-            mainAxisSpacing: 10,
-            crossAxisSpacing: 10,
-            childAspectRatio: crossAxisCount == 1 ? 4.6 : 3.4,
+    return Container(
+      constraints: BoxConstraints(maxWidth: maxWidth),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              label,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
           ),
-          itemBuilder: (context, index) {
-            final item = items[index];
-            return Card(
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      item.$1,
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                            color: Colors.black54,
-                          ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      item.$2,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                  ],
+        ],
+      ),
+    );
+  }
+}
+
+class _DoiRow extends StatelessWidget {
+  const _DoiRow({required this.doi});
+
+  final String doi;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Icon(Icons.link_outlined, size: 16, color: Color(0xFF64748B)),
+        const SizedBox(width: 7),
+        Expanded(
+          child: Text(
+            doi,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: const Color(0xFF64748B),
+                  height: 1.3,
                 ),
-              ),
-            );
-          },
-        );
-      },
+          ),
+        ),
+      ],
     );
   }
 }

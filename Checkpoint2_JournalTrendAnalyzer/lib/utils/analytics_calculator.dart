@@ -156,7 +156,7 @@ class AnalyticsCalculator {
       List<Publication> publications) {
     final counts = <String, int>{};
     for (final pub in publications) {
-      final type = _labelWorkType(pub.workType ?? 'other');
+      final type = labelWorkType(pub.workType ?? 'other');
       counts[type] = (counts[type] ?? 0) + 1;
     }
     return _rank(counts);
@@ -258,7 +258,10 @@ class AnalyticsCalculator {
     return '"$escaped"';
   }
 
-  static String _labelWorkType(String raw) => switch (raw) {
+  /// Human-readable label for an OpenAlex work `type` value. Shared between
+  /// analytics breakdowns and the publication detail screen so the two
+  /// never drift apart.
+  static String labelWorkType(String raw) => switch (raw) {
         'article' => 'Article',
         'review' => 'Review',
         'book-chapter' => 'Book chapter',

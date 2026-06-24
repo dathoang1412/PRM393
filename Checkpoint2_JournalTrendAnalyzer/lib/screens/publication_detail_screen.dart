@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 
 import '../models/publication.dart';
 import '../models/trend_point.dart';
+import '../utils/analytics_calculator.dart';
 
 class PublicationDetailScreen extends StatelessWidget {
   const PublicationDetailScreen({required this.publication, super.key});
@@ -79,7 +80,7 @@ class PublicationDetailScreen extends StatelessWidget {
                       ],
                       if (pub.workType != null)
                         _HeaderBadge(
-                            _labelWorkType(pub.workType!),
+                            AnalyticsCalculator.labelWorkType(pub.workType!),
                             color: Colors.white.withValues(alpha: 0.25)),
                     ],
                   ),
@@ -251,17 +252,6 @@ class PublicationDetailScreen extends StatelessWidget {
       ),
     );
   }
-
-  static String _labelWorkType(String raw) => switch (raw) {
-        'article' => 'Article',
-        'review' => 'Review',
-        'book-chapter' => 'Book Chapter',
-        'conference-paper' => 'Conference',
-        'preprint' => 'Preprint',
-        'dataset' => 'Dataset',
-        'dissertation' => 'Dissertation',
-        _ => raw,
-      };
 }
 
 // ── Meta grid ─────────────────────────────────────────────────────────────────

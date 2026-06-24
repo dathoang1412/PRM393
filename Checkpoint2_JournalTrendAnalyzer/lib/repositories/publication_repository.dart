@@ -1,4 +1,3 @@
-import '../models/publication.dart';
 import '../services/openalex_service.dart';
 
 class PublicationRepository {
@@ -7,7 +6,7 @@ class PublicationRepository {
 
   final OpenAlexService _service;
 
-  Future<List<Publication>> search(String keyword) {
-    return _service.searchWorks(keyword);
+  Future<OpenAlexPage> search(String keyword, {int page = 1}) {
+    return _service.searchWorks(keyword, page: page);
   }
 }

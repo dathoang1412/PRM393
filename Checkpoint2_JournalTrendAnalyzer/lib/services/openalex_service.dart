@@ -28,10 +28,16 @@ class OpenAlexService {
 
   final http.Client _client;
 
-  Future<List<Publication>> searchWorks(String keyword) async {
+  /// Results per page. OpenAlex's basic (page-based) pagination only
+  /// supports up to page * perPage <= 10,000 results — fine for this app,
+  /// since users page through results incrementally via [loadMore].
+  static const perPage = 100;
+
+  Future<OpenAlexPage> searchWorks(String keyword, {int page = 1}) async {
     final queryParameters = <String, String>{
       'search': keyword,
-      'per-page': '100',
+      'page': '$page',
+      'per-page': '$perPage',
       'sort': 'cited_by_count:desc',
       'select': _selectedFields.join(','),
     };
@@ -51,11 +57,19 @@ class OpenAlexService {
       }
 
       final results = decoded['results'];
-      if (results is! List) return <Publication>[];
-      return results
-          .whereType<Map<String, dynamic>>()
-          .map(Publication.fromJson)
-          .toList();
+      final publications = results is List
+          ? results
+              .whereType<Map<String, dynamic>>()
+              .map(Publication.fromJson)
+              .toList()
+          : <Publication>[];
+
+      final meta = decoded['meta'];
+      final metaCount = meta is Map<String, dynamic> ? meta['count'] : null;
+      final totalCount =
+          metaCount is num ? metaCount.toInt() : publications.length;
+
+      return OpenAlexPage(publications: publications, totalCount: totalCount);
     } on SocketException {
       throw const OpenAlexException(
           'No internet connection. Check your network.');
@@ -142,4 +156,13 @@ class OpenAlexException implements Exception {
 
   @override
   String toString() => message;
+}
+
+/// One page of search results plus the total match count reported by
+/// OpenAlex, so callers know whether more pages are available.
+class OpenAlexPage {
+  const OpenAlexPage({required this.publications, required this.totalCount});
+
+  final List<Publication> publications;
+  final int totalCount;
 }

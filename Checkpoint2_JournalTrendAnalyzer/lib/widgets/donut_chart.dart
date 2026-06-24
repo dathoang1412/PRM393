@@ -176,16 +176,18 @@ class _DonutChartState extends State<DonutChart> {
       builder: (context, constraints) {
         final availW = constraints.maxWidth;
 
+        const leadingGap = 20.0;
         const hGap = 80.0;
         const minLegendW = 100.0;
         const maxLegendW = 180.0;
 
-        final useRow = availW >= chartDiameter + hGap + minLegendW;
+        final useRow =
+            availW >= leadingGap + chartDiameter + hGap + minLegendW;
 
         // Fixed-width legend column: fills remaining space up to 280 px.
         // SizedBox gives Row children a tight width so Expanded(label) works
         // correctly and % values column-align at a consistent position.
-        final legendW = (availW - chartDiameter - hGap).clamp(
+        final legendW = (availW - leadingGap - chartDiameter - hGap).clamp(
           minLegendW,
           maxLegendW,
         );
@@ -209,7 +211,7 @@ class _DonutChartState extends State<DonutChart> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                const SizedBox(width: 20),
+                const SizedBox(width: leadingGap),
                 pieWidget,
                 const SizedBox(width: hGap),
                 legendColumn,

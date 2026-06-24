@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../models/publication.dart';
 import '../providers/research_provider.dart';
 import '../utils/analytics_calculator.dart';
 import '../widgets/empty_view.dart';
@@ -106,6 +107,7 @@ class _SearchScreenState extends State<SearchScreen> {
         pubs.isEmpty ? 0.0 : totalCit / pubs.length;
     final yearRange = AnalyticsCalculator.yearRange(pubs);
     final fmtCompact = NumberFormat.compact();
+    final hasMoreToLoad = provider.hasMore;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -133,7 +135,8 @@ class _SearchScreenState extends State<SearchScreen> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          '${pubs.length} publications · sorted by citations',
+                          provider.resultsSummary(
+                              suffix: ' · sorted by citations'),
                           style: Theme.of(context)
                               .textTheme
                               .bodySmall
@@ -213,6 +216,11 @@ class _SearchScreenState extends State<SearchScreen> {
             },
           ),
         ),
+        if (hasMoreToLoad || provider.isLoadingMore)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+            child: _LoadMoreFooter(provider: provider),
+          ),
       ],
     );
   }
@@ -285,7 +293,8 @@ class _SearchScreenState extends State<SearchScreen> {
                   Padding(
                     padding: const EdgeInsets.only(top: 10),
                     child: Text(
-                      '${provider.publications.length} publications found for "${provider.keyword}"',
+                      provider.resultsSummary(
+                          suffix: ' found for "${provider.keyword}"'),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: Theme.of(context).colorScheme.primary,
                           ),
@@ -297,6 +306,14 @@ class _SearchScreenState extends State<SearchScreen> {
           ),
         ),
         _buildMobileResults(context, provider),
+        if (provider.status == ResearchStatus.success &&
+            (provider.hasMore || provider.isLoadingMore))
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: _LoadMoreFooter(provider: provider),
+            ),
+          ),
       ],
     );
   }
@@ -432,10 +449,49 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
-  void _pushDetail(BuildContext context, dynamic publication) {
+  void _pushDetail(BuildContext context, Publication publication) {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => PublicationDetailScreen(publication: publication),
+      ),
+    );
+  }
+}
+
+// ── Load-more footer (paginates beyond the first page of results) ────────────
+
+class _LoadMoreFooter extends StatelessWidget {
+  const _LoadMoreFooter({required this.provider});
+
+  final ResearchProvider provider;
+
+  @override
+  Widget build(BuildContext context) {
+    if (provider.isLoadingMore) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 16),
+        child: Center(
+          child: SizedBox(
+            width: 22,
+            height: 22,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      );
+    }
+
+    final fmt = NumberFormat.decimalPattern();
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      child: Center(
+        child: OutlinedButton.icon(
+          onPressed: provider.loadMore,
+          icon: const Icon(Icons.expand_more),
+          label: Text(
+            'Load more (${fmt.format(provider.publications.length)} of '
+            '${fmt.format(provider.totalCount)})',
+          ),
+        ),
       ),
     );
   }
@@ -687,7 +743,7 @@ class _DesktopSidebar extends StatelessWidget {
                               const SizedBox(width: 6),
                               Expanded(
                                 child: Text(
-                                  '${provider.publications.length} publications found',
+                                  provider.resultsSummary(suffix: ' found'),
                                   style: Theme.of(context)
                                       .textTheme
                                       .bodySmall

@@ -1,4 +1,4 @@
-# Đánh giá kiến trúc mã nguồn — Journal Trend Analyzer
+# Đánh giá kiến trúc mã nguồn — Journexa
 
 > Phạm vi: toàn bộ thư mục `lib/` (~6.300 dòng, 30 file): models → repository → service → provider → screens/widgets.
 > Nhận xét chung: kiến trúc theo mô hình `Provider` + repository/service khá gọn gàng, không bị "vẽ rắn thêm chân". Các vấn đề dưới đây chủ yếu nằm ở việc **lặp code trong lớp UI** và **thiếu kiểm thử (test)**, không phải lỗi cấu trúc nghiêm trọng.

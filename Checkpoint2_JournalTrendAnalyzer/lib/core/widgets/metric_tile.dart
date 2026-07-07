@@ -25,7 +25,7 @@ class MetricTile extends StatelessWidget {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(10),
-        side: const BorderSide(color: Color(0xFFE8EDF5)),
+        side: const BorderSide(color: Color(0xFFE6E2D8)),
       ),
       child: Stack(
         children: [
@@ -68,7 +68,7 @@ class MetricTile extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: const Color(0xFF94A3B8),
+                              color: const Color(0xFF8F8D84),
                               fontWeight: FontWeight.w700,
                               letterSpacing: 0.55,
                               fontSize: 9.5,
@@ -85,7 +85,7 @@ class MetricTile extends StatelessWidget {
                   style: GoogleFonts.spaceGrotesk(
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
-                    color: const Color(0xFF1E293B),
+                    color: const Color(0xFF222D3A),
                     height: 1.15,
                   ),
                 ),
@@ -96,7 +96,7 @@ class MetricTile extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: const Color(0xFF94A3B8),
+                          color: const Color(0xFF8F8D84),
                           fontSize: 10,
                         ),
                   ),

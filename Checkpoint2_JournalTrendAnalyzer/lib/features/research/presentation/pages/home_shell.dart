@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import 'package:journexa/core/theme/app_colors.dart';
+import '../providers/research_provider.dart';
 import 'analytics_screen.dart';
-import 'insights_screen.dart';
+import 'home_screen.dart';
 import 'profile_screen.dart';
 import 'search_screen.dart';
+import 'trends_hub_screen.dart';
 
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
@@ -18,13 +22,48 @@ class _HomeShellState extends State<HomeShell> {
   static const _kDesktopBreak = 800.0;
 
   Widget _buildScreen() => switch (_selectedIndex) {
-        0 => SearchScreen(onSearchSuccess: () => _onSelect(2)),
-        1 => const InsightsScreen(),
-        2 => const AnalyticsScreen(),
+        0 => HomeScreen(
+            onOpenResearch: () => _onSelect(1),
+            onOpenTrends: () => _onSelect(2),
+            onOpenRankings: _openRankings,
+            onSearchTopic: _searchFromHome,
+          ),
+        1 => SearchScreen(
+            onViewDashboard: () => _onSelect(2),
+            onOpenRankings: () => _openRankings(0),
+          ),
+        2 => TrendsHubScreen(
+            onChangeTopic: () => _onSelect(1),
+            onOpenRankings: () => _openRankings(0),
+          ),
         _ => const ProfileScreen(),
       };
 
   void _onSelect(int index) => setState(() => _selectedIndex = index);
+
+  /// Kicks off a live search for a trending topic, then lands the user on
+  /// the Research tab where the loading state and results appear.
+  void _searchFromHome(String topic) {
+    context.read<ResearchProvider>().search(topic);
+    _onSelect(1);
+  }
+
+  /// Rankings is not a nav destination — it opens as a pushed route (with a
+  /// back button), keeping the bottom bar to the four main pages.
+  /// [initialTab] deep-links to a specific ranking (0 Journals, 1 Authors, …).
+  void _openRankings(int initialTab) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => AnalyticsScreen(
+          initialTab: initialTab,
+          onChangeTopic: () {
+            Navigator.of(context).pop();
+            _onSelect(1);
+          },
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -72,19 +111,19 @@ class _HomeShellState extends State<HomeShell> {
             ),
             destinations: const [
               NavigationRailDestination(
-                icon: Icon(Icons.search_outlined),
-                selectedIcon: Icon(Icons.search),
-                label: Text('Search'),
+                icon: Icon(Icons.home_outlined),
+                selectedIcon: Icon(Icons.home),
+                label: Text('Home'),
               ),
               NavigationRailDestination(
-                icon: Icon(Icons.dashboard_outlined),
-                selectedIcon: Icon(Icons.dashboard),
-                label: Text('Insights'),
+                icon: Icon(Icons.travel_explore_outlined),
+                selectedIcon: Icon(Icons.travel_explore),
+                label: Text('Research'),
               ),
               NavigationRailDestination(
-                icon: Icon(Icons.bar_chart_outlined),
-                selectedIcon: Icon(Icons.bar_chart),
-                label: Text('Keywords'),
+                icon: Icon(Icons.show_chart_outlined),
+                selectedIcon: Icon(Icons.show_chart),
+                label: Text('Trends'),
               ),
               NavigationRailDestination(
                 icon: Icon(Icons.person_outline),
@@ -105,26 +144,26 @@ class _HomeShellState extends State<HomeShell> {
       body: SafeArea(child: _buildScreen()),
       bottomNavigationBar: DecoratedBox(
         decoration: const BoxDecoration(
-          border: Border(top: BorderSide(color: Color(0xFFDDE3F5))),
+          border: Border(top: BorderSide(color: AppColors.border)),
         ),
         child: NavigationBar(
           selectedIndex: _selectedIndex,
           onDestinationSelected: _onSelect,
           destinations: const [
             NavigationDestination(
-              icon: Icon(Icons.search_outlined),
-              selectedIcon: Icon(Icons.search),
-              label: 'Search',
+              icon: Icon(Icons.home_outlined),
+              selectedIcon: Icon(Icons.home),
+              label: 'Home',
             ),
             NavigationDestination(
-              icon: Icon(Icons.dashboard_outlined),
-              selectedIcon: Icon(Icons.dashboard),
-              label: 'Insights',
+              icon: Icon(Icons.travel_explore_outlined),
+              selectedIcon: Icon(Icons.travel_explore),
+              label: 'Research',
             ),
             NavigationDestination(
-              icon: Icon(Icons.bar_chart_outlined),
-              selectedIcon: Icon(Icons.bar_chart),
-              label: 'Keywords',
+              icon: Icon(Icons.show_chart_outlined),
+              selectedIcon: Icon(Icons.show_chart),
+              label: 'Trends',
             ),
             NavigationDestination(
               icon: Icon(Icons.person_outline),

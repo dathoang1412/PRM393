@@ -48,10 +48,10 @@ class _HorizontalBarChartState extends State<HorizontalBarChart> {
   }
 
   static Color _rankColor(int rank) => switch (rank) {
-        1 => const Color(0xFFD97706),
-        2 => const Color(0xFF64748B),
-        3 => const Color(0xFFEA580C),
-        _ => const Color(0xFF94A3B8),
+        1 => const Color(0xFFB45309),
+        2 => const Color(0xFF5D6672),
+        3 => const Color(0xFFC0504E),
+        _ => const Color(0xFF8F8D84),
       };
 
   @override
@@ -100,7 +100,7 @@ class _HorizontalBarChartState extends State<HorizontalBarChart> {
                     decoration: BoxDecoration(
                       color: rank <= 3
                           ? rankColor.withValues(alpha: 0.12)
-                          : const Color(0xFFF1F5F9),
+                          : const Color(0xFFF3F1EA),
                       shape: BoxShape.circle,
                     ),
                     child: Text(
@@ -110,7 +110,7 @@ class _HorizontalBarChartState extends State<HorizontalBarChart> {
                         fontWeight: FontWeight.w800,
                         color: rank <= 3
                             ? rankColor
-                            : const Color(0xFF94A3B8),
+                            : const Color(0xFF8F8D84),
                       ),
                     ),
                   ),
@@ -125,7 +125,7 @@ class _HorizontalBarChartState extends State<HorizontalBarChart> {
                       style:
                           Theme.of(context).textTheme.bodySmall?.copyWith(
                                 fontWeight: FontWeight.w600,
-                                color: const Color(0xFF1E293B),
+                                color: const Color(0xFF222D3A),
                               ),
                     ),
                   ),
@@ -141,7 +141,7 @@ class _HorizontalBarChartState extends State<HorizontalBarChart> {
                           width: double.infinity,
                           height: 26,
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF1F5F9),
+                            color: const Color(0xFFF3F1EA),
                             borderRadius: BorderRadius.circular(6),
                           ),
                         ),

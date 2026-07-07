@@ -5,7 +5,10 @@ import 'dart:io';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 
-import '../models/publication.dart';
+import 'package:journexa/core/error/openalex_exception.dart';
+import 'package:journexa/features/research/data/models/openalex_page.dart';
+import 'package:journexa/features/research/data/models/publication.dart';
+import 'package:journexa/features/research/data/models/trend_point.dart';
 
 class OpenAlexService {
   OpenAlexService({http.Client? client}) : _client = client ?? http.Client();
@@ -83,6 +86,61 @@ class OpenAlexService {
     }
   }
 
+  /// Publication counts per year for **every** work matching [keyword],
+  /// via OpenAlex's `group_by=publication_year` aggregation. Unlike the
+  /// paged search results (sorted by citations, loaded incrementally), this
+  /// reflects the entire corpus, so trend charts aren't biased toward the
+  /// years that produced the most-cited papers.
+  Future<List<TrendPoint>> yearCounts(String keyword) async {
+    final queryParameters = <String, String>{
+      'search': keyword,
+      'group_by': 'publication_year',
+      'per-page': '200',
+    };
+
+    final apiKey = dotenv.env['OPENALEX_API_KEY']?.trim();
+    if (apiKey != null && apiKey.isNotEmpty) {
+      queryParameters['api_key'] = apiKey;
+    }
+
+    final uri = Uri.https(_apiHost, '/works', queryParameters);
+
+    try {
+      final response = await _getWithRetry(uri);
+      final decoded = jsonDecode(response.body);
+      if (decoded is! Map<String, dynamic>) {
+        throw const OpenAlexException('Unexpected OpenAlex response format.');
+      }
+
+      final groups = decoded['group_by'];
+      if (groups is! List) return const [];
+
+      final points = groups
+          .whereType<Map<String, dynamic>>()
+          .map((g) {
+            final year = int.tryParse('${g['key']}');
+            final count = g['count'];
+            return (year != null && count is int && year > 1000)
+                ? TrendPoint(year: year, count: count)
+                : null;
+          })
+          .whereType<TrendPoint>()
+          .toList()
+        ..sort((a, b) => a.year.compareTo(b.year));
+      return points;
+    } on SocketException {
+      throw const OpenAlexException(
+          'No internet connection. Check your network.');
+    } on FormatException {
+      throw const OpenAlexException('OpenAlex returned malformed data.');
+    } on OpenAlexException {
+      rethrow;
+    } catch (_) {
+      throw const OpenAlexException(
+          'Unable to fetch publication trends. Try again.');
+    }
+  }
+
   Future<http.Response> _getWithRetry(Uri uri) async {
     const maxAttempts = 3;
 
@@ -147,22 +205,4 @@ class OpenAlexService {
     }
     return null;
   }
-}
-
-class OpenAlexException implements Exception {
-  const OpenAlexException(this.message);
-
-  final String message;
-
-  @override
-  String toString() => message;
-}
-
-/// One page of search results plus the total match count reported by
-/// OpenAlex, so callers know whether more pages are available.
-class OpenAlexPage {
-  const OpenAlexPage({required this.publications, required this.totalCount});
-
-  final List<Publication> publications;
-  final int totalCount;
 }

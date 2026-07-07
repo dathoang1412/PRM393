@@ -29,7 +29,7 @@ class ErrorView extends StatelessWidget {
               'Something went wrong',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFF1E293B),
+                    color: const Color(0xFF222D3A),
                   ),
             ),
             const SizedBox(height: 8),
@@ -37,7 +37,7 @@ class ErrorView extends StatelessWidget {
               message,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: const Color(0xFF64748B),
+                    color: const Color(0xFF5D6672),
                     height: 1.55,
                   ),
             ),

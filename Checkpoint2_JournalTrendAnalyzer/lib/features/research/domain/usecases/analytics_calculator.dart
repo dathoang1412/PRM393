@@ -1,14 +1,14 @@
 import 'dart:math';
 
-import '../models/author_impact.dart';
-import '../models/author_stat.dart';
-import '../models/country_stat.dart';
-import '../models/dashboard_summary.dart';
-import '../models/institution_stat.dart';
-import '../models/journal_stat.dart';
-import '../models/keyword_stat.dart';
-import '../models/publication.dart';
-import '../models/trend_point.dart';
+import 'package:journexa/features/research/data/models/author_impact.dart';
+import 'package:journexa/features/research/data/models/author_stat.dart';
+import 'package:journexa/features/research/data/models/country_stat.dart';
+import 'package:journexa/features/research/data/models/dashboard_summary.dart';
+import 'package:journexa/features/research/data/models/institution_stat.dart';
+import 'package:journexa/features/research/data/models/journal_stat.dart';
+import 'package:journexa/features/research/data/models/keyword_stat.dart';
+import 'package:journexa/features/research/data/models/publication.dart';
+import 'package:journexa/features/research/data/models/trend_point.dart';
 
 class AnalyticsCalculator {
   const AnalyticsCalculator._();
@@ -221,7 +221,7 @@ class AnalyticsCalculator {
   static String exportCsv(List<Publication> publications, String keyword) {
     final now = DateTime.now();
     final sb = StringBuffer();
-    sb.writeln('# Journal Trend Analyzer — Export Report');
+    sb.writeln('# Journexa — Export Report');
     sb.writeln('# Topic: $keyword');
     sb.writeln(
         '# Generated: ${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')} '

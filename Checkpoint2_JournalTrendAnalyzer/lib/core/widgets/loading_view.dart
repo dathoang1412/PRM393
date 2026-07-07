@@ -36,7 +36,7 @@ class LoadingView extends StatelessWidget {
             message,
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: const Color(0xFF64748B),
+                  color: const Color(0xFF5D6672),
                 ),
           ),
         ],

@@ -1,4 +1,4 @@
-import '../utils/abstract_parser.dart';
+import 'package:journexa/core/utils/abstract_parser.dart';
 import 'year_count.dart';
 
 class Publication {

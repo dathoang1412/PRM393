@@ -42,10 +42,10 @@ class YearRangeFilter extends StatelessWidget {
               alignment: Alignment.center,
               padding: const EdgeInsets.symmetric(horizontal: 12),
               decoration: BoxDecoration(
-                color: isActive ? primary : const Color(0xFFEFF6FF),
+                color: isActive ? primary : const Color(0xFFE7F1EC),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: isActive ? primary : const Color(0xFFBFDBFE),
+                  color: isActive ? primary : const Color(0xFFC0D8CD),
                 ),
               ),
               child: Text(
@@ -53,7 +53,7 @@ class YearRangeFilter extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
-                  color: isActive ? Colors.white : const Color(0xFF1D4ED8),
+                  color: isActive ? Colors.white : const Color(0xFF0F5D4E),
                 ),
               ),
             ),

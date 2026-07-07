@@ -2,7 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../models/trend_point.dart';
+import 'package:journexa/features/research/data/models/trend_point.dart';
 
 class TrendChart extends StatelessWidget {
   const TrendChart({
@@ -70,7 +70,7 @@ class TrendChart extends StatelessWidget {
     final labelStyle = GoogleFonts.spaceGrotesk(
       fontSize: 10,
       fontWeight: FontWeight.w500,
-      color: const Color(0xFF94A3B8),
+      color: const Color(0xFF8F8D84),
     );
 
     final showLabels = _labelYears(sortedPoints).toSet();
@@ -159,15 +159,15 @@ class TrendChart extends StatelessWidget {
           drawVerticalLine: false,
           horizontalInterval: yInterval,
           getDrawingHorizontalLine: (_) => const FlLine(
-            color: Color(0xFFEEF2FF),
+            color: Color(0xFFF3F1EA),
             strokeWidth: 1,
           ),
         ),
         borderData: FlBorderData(
           show: true,
           border: const Border(
-            left: BorderSide(color: Color(0xFFDDE3F5)),
-            bottom: BorderSide(color: Color(0xFFDDE3F5)),
+            left: BorderSide(color: Color(0xFFE6E2D8)),
+            bottom: BorderSide(color: Color(0xFFE6E2D8)),
           ),
         ),
         titlesData: FlTitlesData(

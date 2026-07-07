@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
-import '../models/author_impact.dart';
+import 'package:journexa/features/research/data/models/author_impact.dart';
 
 class ScatterPlotWidget extends StatefulWidget {
   const ScatterPlotWidget({
@@ -56,7 +56,7 @@ class _ScatterPlotWidgetState extends State<ScatterPlotWidget> {
     final labelStyle = GoogleFonts.spaceGrotesk(
       fontSize: 10,
       fontWeight: FontWeight.w500,
-      color: const Color(0xFF94A3B8),
+      color: const Color(0xFF8F8D84),
     );
 
     return ScatterChart(
@@ -130,19 +130,19 @@ class _ScatterPlotWidgetState extends State<ScatterPlotWidget> {
           horizontalInterval: maxCits > 4 ? maxCits / 4 : 1,
           verticalInterval: maxPubs > 4 ? maxPubs / 4 : 1,
           getDrawingHorizontalLine: (_) => const FlLine(
-            color: Color(0xFFEEF2FF),
+            color: Color(0xFFF3F1EA),
             strokeWidth: 1,
           ),
           getDrawingVerticalLine: (_) => const FlLine(
-            color: Color(0xFFEEF2FF),
+            color: Color(0xFFF3F1EA),
             strokeWidth: 1,
           ),
         ),
         borderData: FlBorderData(
           show: true,
           border: const Border(
-            left: BorderSide(color: Color(0xFFDDE3F5)),
-            bottom: BorderSide(color: Color(0xFFDDE3F5)),
+            left: BorderSide(color: Color(0xFFE6E2D8)),
+            bottom: BorderSide(color: Color(0xFFE6E2D8)),
           ),
         ),
         titlesData: FlTitlesData(

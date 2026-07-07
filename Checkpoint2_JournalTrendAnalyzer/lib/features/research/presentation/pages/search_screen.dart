@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
-import '../models/publication.dart';
+import 'package:journexa/features/research/data/models/publication.dart';
 import '../providers/research_provider.dart';
-import '../utils/analytics_calculator.dart';
-import '../widgets/empty_view.dart';
-import '../widgets/error_view.dart';
-import '../widgets/loading_view.dart';
+import 'package:journexa/features/research/domain/usecases/analytics_calculator.dart';
+import 'package:journexa/core/widgets/empty_view.dart';
+import 'package:journexa/core/widgets/error_view.dart';
+import 'package:journexa/core/widgets/loading_view.dart';
 import '../widgets/publication_card.dart';
 import 'publication_detail_screen.dart';
 
@@ -26,9 +26,14 @@ const _kDesktopBreak = 700.0;
 const _kSidebarWidth = 320.0;
 
 class SearchScreen extends StatefulWidget {
-  const SearchScreen({this.onSearchSuccess, super.key});
+  const SearchScreen({this.onViewDashboard, this.onOpenRankings, super.key});
 
-  final VoidCallback? onSearchSuccess;
+  /// Navigates to the Dashboard tab. Only ever triggered by the user tapping
+  /// the "View dashboard" button — searching never yanks them off this screen.
+  final VoidCallback? onViewDashboard;
+
+  /// Opens the Rankings screen for the loaded results.
+  final VoidCallback? onOpenRankings;
 
   @override
   State<SearchScreen> createState() => _SearchScreenState();
@@ -54,12 +59,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
   Future<void> _search(String topic) async {
     _controller.text = topic;
-    final provider = context.read<ResearchProvider>();
-    await provider.search(topic);
-    if (!mounted) return;
-    if (provider.status == ResearchStatus.success) {
-      widget.onSearchSuccess?.call();
-    }
+    await context.read<ResearchProvider>().search(topic);
   }
 
   @override
@@ -85,11 +85,12 @@ class _SearchScreenState extends State<SearchScreen> {
           controller: _controller,
           provider: provider,
           onSearch: _search,
+          onViewDashboard: widget.onViewDashboard,
         ),
         const VerticalDivider(
           width: 1,
           thickness: 1,
-          color: Color(0xFFE2E8F0),
+          color: Color(0xFFE6E2D8),
         ),
         Expanded(child: _buildDesktopResults(context, provider)),
       ],
@@ -140,11 +141,29 @@ class _SearchScreenState extends State<SearchScreen> {
                           style: Theme.of(context)
                               .textTheme
                               .bodySmall
-                              ?.copyWith(color: const Color(0xFF64748B)),
+                              ?.copyWith(color: const Color(0xFF5D6672)),
                         ),
                       ],
                     ),
                   ),
+                  if (widget.onOpenRankings != null) ...[
+                    IconButton(
+                      tooltip: 'Rankings',
+                      onPressed: widget.onOpenRankings,
+                      icon: const Icon(Icons.leaderboard_outlined, size: 18),
+                    ),
+                    const SizedBox(width: 4),
+                  ],
+                  if (widget.onViewDashboard != null)
+                    OutlinedButton.icon(
+                      onPressed: widget.onViewDashboard,
+                      icon: const Icon(Icons.dashboard_outlined, size: 16),
+                      label: const Text('View dashboard'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 10),
+                      ),
+                    ),
                 ],
               ),
               const SizedBox(height: 12),
@@ -191,7 +210,7 @@ class _SearchScreenState extends State<SearchScreen> {
             ],
           ),
         ),
-        const Divider(height: 1, color: Color(0xFFE2E8F0)),
+        const Divider(height: 1, color: Color(0xFFE6E2D8)),
         Expanded(
           child: LayoutBuilder(
             builder: (context, constraints) {
@@ -254,8 +273,16 @@ class _SearchScreenState extends State<SearchScreen> {
       slivers: [
         SliverAppBar(
           pinned: true,
-          title: const Text('Journal Trend Analyzer'),
+          title: const Text('Journal Research'),
           actions: [
+            if (widget.onOpenRankings != null)
+              IconButton(
+                tooltip: 'Rankings',
+                onPressed: provider.status == ResearchStatus.success
+                    ? widget.onOpenRankings
+                    : null,
+                icon: const Icon(Icons.leaderboard_outlined),
+              ),
             IconButton(
               tooltip: 'Search topic',
               onPressed: () => _search(_controller.text),
@@ -280,7 +307,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 Text(
                   'Search OpenAlex for scholarly works, then review trends, journals, authors, and influential papers.',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: const Color(0xFF64748B),
+                        color: const Color(0xFF5D6672),
                       ),
                 ),
                 const SizedBox(height: 16),
@@ -291,13 +318,34 @@ class _SearchScreenState extends State<SearchScreen> {
                 _buildSearchButton(provider),
                 if (provider.status == ResearchStatus.success)
                   Padding(
-                    padding: const EdgeInsets.only(top: 10),
-                    child: Text(
-                      provider.resultsSummary(
-                          suffix: ' found for "${provider.keyword}"'),
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context).colorScheme.primary,
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            provider.resultsSummary(
+                                suffix: ' found for "${provider.keyword}"'),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
                           ),
+                        ),
+                        if (widget.onViewDashboard != null)
+                          TextButton.icon(
+                            onPressed: widget.onViewDashboard,
+                            icon: const Icon(Icons.dashboard_outlined,
+                                size: 14),
+                            label: const Text('View dashboard'),
+                            style: TextButton.styleFrom(
+                              visualDensity: VisualDensity.compact,
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                 const SizedBox(height: 4),
@@ -412,12 +460,12 @@ class _SearchScreenState extends State<SearchScreen> {
               decoration: BoxDecoration(
                 color: isActive
                     ? Theme.of(context).colorScheme.primary
-                    : const Color(0xFFEFF6FF),
+                    : const Color(0xFFE7F1EC),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
                   color: isActive
                       ? Theme.of(context).colorScheme.primary
-                      : const Color(0xFFBFDBFE),
+                      : const Color(0xFFC0D8CD),
                 ),
               ),
               child: Text(
@@ -425,7 +473,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
                       color: isActive
                           ? Colors.white
-                          : const Color(0xFF1D4ED8),
+                          : const Color(0xFF0F5D4E),
                       fontWeight: FontWeight.w600,
                     ),
               ),
@@ -532,11 +580,13 @@ class _DesktopSidebar extends StatelessWidget {
     required this.controller,
     required this.provider,
     required this.onSearch,
+    this.onViewDashboard,
   });
 
   final TextEditingController controller;
   final ResearchProvider provider;
   final ValueChanged<String> onSearch;
+  final VoidCallback? onViewDashboard;
 
   @override
   Widget build(BuildContext context) {
@@ -561,7 +611,7 @@ class _DesktopSidebar extends StatelessWidget {
                     end: Alignment.bottomRight,
                     colors: [
                       colorScheme.primary,
-                      const Color(0xFF2563EB),
+                      const Color(0xFF15806B),
                     ],
                   ),
                 ),
@@ -584,7 +634,7 @@ class _DesktopSidebar extends StatelessWidget {
                         ),
                         const SizedBox(width: 10),
                         Text(
-                          'Journal Trend Analyzer',
+                          'Journexa',
                           style:
                               Theme.of(context).textTheme.titleSmall?.copyWith(
                                     color: Colors.white,
@@ -618,7 +668,7 @@ class _DesktopSidebar extends StatelessWidget {
                         style:
                             Theme.of(context).textTheme.labelLarge?.copyWith(
                                   fontWeight: FontWeight.w600,
-                                  color: const Color(0xFF475569),
+                                  color: const Color(0xFF515A66),
                                 ),
                       ),
                       const SizedBox(height: 8),
@@ -647,7 +697,7 @@ class _DesktopSidebar extends StatelessWidget {
                         style:
                             Theme.of(context).textTheme.labelLarge?.copyWith(
                                   fontWeight: FontWeight.w600,
-                                  color: const Color(0xFF475569),
+                                  color: const Color(0xFF515A66),
                                 ),
                       ),
                       const SizedBox(height: 8),
@@ -669,12 +719,12 @@ class _DesktopSidebar extends StatelessWidget {
                               decoration: BoxDecoration(
                                 color: isActive
                                     ? colorScheme.primary
-                                    : const Color(0xFFEFF6FF),
+                                    : const Color(0xFFE7F1EC),
                                 borderRadius: BorderRadius.circular(20),
                                 border: Border.all(
                                   color: isActive
                                       ? colorScheme.primary
-                                      : const Color(0xFFBFDBFE),
+                                      : const Color(0xFFC0D8CD),
                                 ),
                               ),
                               child: Text(
@@ -685,7 +735,7 @@ class _DesktopSidebar extends StatelessWidget {
                                     ?.copyWith(
                                       color: isActive
                                           ? Colors.white
-                                          : const Color(0xFF1D4ED8),
+                                          : const Color(0xFF0F5D4E),
                                       fontWeight: FontWeight.w600,
                                     ),
                               ),
@@ -756,6 +806,18 @@ class _DesktopSidebar extends StatelessWidget {
                             ],
                           ),
                         ),
+                        if (onViewDashboard != null) ...[
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed: onViewDashboard,
+                              icon: const Icon(Icons.dashboard_outlined,
+                                  size: 16),
+                              label: const Text('View dashboard'),
+                            ),
+                          ),
+                        ],
                       ],
                     ],
                   ),

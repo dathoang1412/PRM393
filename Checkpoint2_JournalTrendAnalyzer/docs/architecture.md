@@ -2,7 +2,7 @@
 
 ## System Overview
 
-Journal Trend Analyzer follows a **layered architecture** with unidirectional data flow:
+Journexa follows a **layered architecture** with unidirectional data flow:
 
 ```
 OpenAlex API

@@ -1,6 +1,6 @@
 # Onboarding Guide
 
-Welcome to **Journal Trend Analyzer**. This guide walks you through every important
+Welcome to **Journexa**. This guide walks you through every important
 file in the codebase in dependency order — start at the entry point and follow the
 chain outward.
 
@@ -31,7 +31,7 @@ There is intentionally no service locator or code generation. The wiring is expl
 
 **Key imports:** `flutter_dotenv`, `provider`, `app.dart`, `research_provider.dart`, `publication_repository.dart`, `openalex_service.dart`
 
-**Next:** The mounted widget is `JournalTrendAnalyzerApp` in `app.dart`…
+**Next:** The mounted widget is `JournexaApp` in `app.dart`…
 
 ---
 
@@ -39,7 +39,7 @@ There is intentionally no service locator or code generation. The wiring is expl
 
 📍 **File:** `lib/app.dart`
 
-`JournalTrendAnalyzerApp` defines the entire Material 3 design system for the app.
+`JournexaApp` defines the entire Material 3 design system for the app.
 Any color, font, or component style change should start here:
 
 - **Primary:** `#1E40AF` (deep blue — scholarly authority)

@@ -14,24 +14,24 @@ class RankedStatList extends StatelessWidget {
   final List<RankedStatItem> items;
 
   static Color _rankBg(int rank) => switch (rank) {
-        1 => const Color(0xFFFEF3C7),
-        2 => const Color(0xFFF1F5F9),
-        3 => const Color(0xFFFFF1EE),
-        _ => const Color(0xFFF8FAFC),
+        1 => const Color(0xFFF7ECD9),
+        2 => const Color(0xFFF3F1EA),
+        3 => const Color(0xFFF6EAE3),
+        _ => const Color(0xFFF6F4EF),
       };
 
   static Color _rankFg(int rank) => switch (rank) {
         1 => const Color(0xFFB45309),
-        2 => const Color(0xFF64748B),
-        3 => const Color(0xFFC2410C),
-        _ => const Color(0xFF94A3B8),
+        2 => const Color(0xFF5D6672),
+        3 => const Color(0xFFA14D33),
+        _ => const Color(0xFF8F8D84),
       };
 
   static Color _barColor(int rank) => switch (rank) {
-        1 => const Color(0xFFF59E0B),
-        2 => const Color(0xFF94A3B8),
-        3 => const Color(0xFFF97316),
-        _ => const Color(0xFF3B82F6),
+        1 => const Color(0xFFC98500),
+        2 => const Color(0xFF8F8D84),
+        3 => const Color(0xFFC0504E),
+        _ => const Color(0xFF2E67B2),
       };
 
   @override
@@ -111,7 +111,7 @@ class RankedStatList extends StatelessWidget {
                         child: LinearProgressIndicator(
                           value: percent,
                           minHeight: 6,
-                          backgroundColor: const Color(0xFFE2E8F0),
+                          backgroundColor: const Color(0xFFE6E2D8),
                           color: barColor,
                         ),
                       ),

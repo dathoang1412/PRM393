@@ -1,11 +1,11 @@
-# Journal Trend Analyzer
+# Journexa
 
 > Auto-generated documentation from codebase analysis.
 > Last generated: 2026-06-16 | Commit: `8e59fe6`
 
 ## Overview
 
-**Journal Trend Analyzer** is a Flutter application for exploring academic publication trends powered by the [OpenAlex](https://openalex.org) open scholarly data API. Users search any research topic (e.g. "Machine Learning", "Quantum Computing") and instantly see a curated set of up to 50 highly-cited papers, along with automatically computed trend charts, journal/author rankings, and key KPI metrics.
+**Journexa** is a Flutter application for exploring academic publication trends powered by the [OpenAlex](https://openalex.org) open scholarly data API. Users search any research topic (e.g. "Machine Learning", "Quantum Computing") and instantly see a curated set of up to 50 highly-cited papers, along with automatically computed trend charts, journal/author rankings, and key KPI metrics.
 
 The app targets both **mobile** (bottom navigation, single-column layout) and **desktop** (sidebar navigation, multi-column layout) through Flutter's cross-platform renderer. It is structured as a clean, layered Flutter project: a Provider-based state layer sits between the network service and the UI, with pure Dart utility classes handling all analytics computation.
 

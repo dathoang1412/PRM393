@@ -4,19 +4,30 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/research_provider.dart';
-import '../utils/analytics_calculator.dart';
-import '../widgets/donut_chart.dart';
-import '../widgets/empty_view.dart';
-import '../widgets/horizontal_bar_chart.dart';
-import '../widgets/insight_note.dart';
-import '../widgets/metric_tile.dart';
+import 'package:journexa/features/research/domain/usecases/analytics_calculator.dart';
+import 'package:journexa/core/widgets/donut_chart.dart';
+import 'package:journexa/core/widgets/empty_view.dart';
+import 'package:journexa/core/widgets/horizontal_bar_chart.dart';
+import 'package:journexa/core/widgets/insight_note.dart';
+import 'package:journexa/core/widgets/metric_tile.dart';
 import '../widgets/publication_card.dart';
 import '../widgets/scatter_plot_widget.dart';
-import '../widgets/year_range_filter.dart';
+import 'package:journexa/core/utils/app_feedback.dart';
+import 'package:journexa/core/widgets/section_card.dart';
+import '../widgets/filter_header.dart';
+import '../widgets/topic_context_bar.dart';
 import 'publication_detail_screen.dart';
 
 class AnalyticsScreen extends StatelessWidget {
-  const AnalyticsScreen({super.key});
+  const AnalyticsScreen({this.onChangeTopic, this.initialTab = 0, super.key});
+
+  /// Switches back to the Search tab so the user can load another topic.
+  final VoidCallback? onChangeTopic;
+
+  /// Which ranking tab to land on (0 Journals, 1 Authors, 2 Keywords,
+  /// 3 Institutions, 4 Top Papers) — entry points deep-link to the tab the
+  /// user actually asked for.
+  final int initialTab;
 
   void _export(BuildContext context, ResearchProvider provider) {
     final csv = AnalyticsCalculator.exportCsv(
@@ -24,13 +35,9 @@ class AnalyticsScreen extends StatelessWidget {
       provider.keyword,
     );
     Clipboard.setData(ClipboardData(text: csv));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('CSV copied to clipboard'),
-        backgroundColor: Color(0xFF059669),
-        behavior: SnackBarBehavior.floating,
-        duration: Duration(seconds: 3),
-      ),
+    showSuccessSnackBar(
+      context,
+      'CSV copied — ${provider.filteredPublications.length} papers',
     );
   }
 
@@ -39,18 +46,21 @@ class AnalyticsScreen extends StatelessWidget {
     final provider = context.watch<ResearchProvider>();
 
     if (provider.publications.isEmpty) {
-      return const EmptyView(
-        icon: Icons.bar_chart,
+      return EmptyView(
+        icon: Icons.leaderboard_outlined,
         title: 'No rankings yet',
         message: 'Search a topic to rank journals, authors, and more.',
+        actionLabel: onChangeTopic != null ? 'Search a topic' : null,
+        onAction: onChangeTopic,
       );
     }
 
     return DefaultTabController(
       length: 5,
+      initialIndex: initialTab,
       child: Scaffold(
         appBar: AppBar(
-          title: Text('Keywords · ${provider.keyword}'),
+          title: const Text('Rankings'),
           actions: [
             IconButton(
               icon: const Icon(Icons.download_outlined),
@@ -71,13 +81,20 @@ class AnalyticsScreen extends StatelessWidget {
             ],
           ),
         ),
-        body: TabBarView(
+        body: Column(
           children: [
-            _JournalsTab(provider: provider),
-            _AuthorsTab(provider: provider),
-            _KeywordsTab(provider: provider),
-            _InstitutionsTab(provider: provider),
-            _PapersTab(provider: provider),
+            TopicContextBar(onChangeTopic: onChangeTopic),
+            Expanded(
+              child: TabBarView(
+                children: [
+                  _JournalsTab(provider: provider),
+                  _AuthorsTab(provider: provider),
+                  _KeywordsTab(provider: provider),
+                  _InstitutionsTab(provider: provider),
+                  _PapersTab(provider: provider),
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -91,7 +108,7 @@ class _JournalsTab extends StatelessWidget {
   const _JournalsTab({required this.provider});
   final ResearchProvider provider;
 
-  static const _color = Color(0xFF7C3AED);
+  static const _color = Color(0xFF6D4FA3);
 
   @override
   Widget build(BuildContext context) {
@@ -141,10 +158,10 @@ class _JournalsTab extends StatelessWidget {
                   '"${journals.first.name}" leads with ${journals.first.publicationCount} papers, representing ${total == 0 ? 0 : (journals.first.publicationCount / total * 100).toStringAsFixed(0)}% of all results.',
             )
           : null,
-      filterRow: const YearRangeFilter(),
+      filterRow: const FilterHeader(),
       sections: items.isEmpty
           ? [
-              const _ChartSection(
+              const SectionCard(
                 icon: Icons.menu_book_outlined,
                 iconColor: _color,
                 title: 'Journal Ranking',
@@ -187,7 +204,7 @@ class _AuthorsTab extends StatelessWidget {
   const _AuthorsTab({required this.provider});
   final ResearchProvider provider;
 
-  static const _color = Color(0xFF1D4ED8);
+  static const _color = Color(0xFF2E67B2);
 
   @override
   Widget build(BuildContext context) {
@@ -241,10 +258,10 @@ class _AuthorsTab extends StatelessWidget {
                   '$uniqueAuthors unique contributors found across $total papers.',
             )
           : null,
-      filterRow: const YearRangeFilter(),
+      filterRow: const FilterHeader(),
       sections: items.isEmpty
           ? [
-              const _ChartSection(
+              const SectionCard(
                 icon: Icons.person_outline,
                 iconColor: _color,
                 title: 'Author Ranking',
@@ -284,7 +301,7 @@ class _AuthorsTab extends StatelessWidget {
                 }).toList(),
               ),
               if (impacts.length >= 3)
-                _ChartSection(
+                SectionCard(
                   icon: Icons.scatter_plot_outlined,
                   iconColor: _color,
                   title: 'Author Impact Matrix',
@@ -308,7 +325,7 @@ class _KeywordsTab extends StatelessWidget {
   const _KeywordsTab({required this.provider});
   final ResearchProvider provider;
 
-  static const _color = Color(0xFF0891B2);
+  static const _color = Color(0xFF1791B8);
 
   @override
   Widget build(BuildContext context) {
@@ -368,10 +385,10 @@ class _KeywordsTab extends StatelessWidget {
                   'Top-5 concepts cover ${AnalyticsCalculator.topConcentration(keywords.map((k) => MapEntry(k.name, k.count)).toList(), 5).toStringAsFixed(0)}% of all concept mentions.',
             )
           : null,
-      filterRow: const YearRangeFilter(),
+      filterRow: const FilterHeader(),
       sections: items.isEmpty
           ? [
-              const _ChartSection(
+              const SectionCard(
                 icon: Icons.label_outline,
                 iconColor: _color,
                 title: 'Research Keywords',
@@ -391,12 +408,12 @@ class _KeywordsTab extends StatelessWidget {
   }
 
   static const _kPalette = [
-    Color(0xFF0891B2),
-    Color(0xFF1D4ED8),
-    Color(0xFF7C3AED),
-    Color(0xFF059669),
-    Color(0xFFD97706),
-    Color(0xFFEA580C),
+    Color(0xFF1791B8),
+    Color(0xFF2E67B2),
+    Color(0xFF6D4FA3),
+    Color(0xFF12896B),
+    Color(0xFFB45309),
+    Color(0xFFC0504E),
   ];
 }
 
@@ -417,7 +434,7 @@ class _KeywordsLayout extends StatelessWidget {
       builder: (context, constraints) {
         final isWide = constraints.maxWidth > 680;
 
-        final donutCard = _ChartSection(
+        final donutCard = SectionCard(
           icon: Icons.donut_large_outlined,
           iconColor: color,
           title: 'Top 6 Concepts',
@@ -430,7 +447,7 @@ class _KeywordsLayout extends StatelessWidget {
                 ),
         );
 
-        final barCard = _ChartSection(
+        final barCard = SectionCard(
           icon: Icons.label_outline,
           iconColor: color,
           title: 'Top 20 Keywords',
@@ -472,7 +489,7 @@ class _InstitutionsTab extends StatelessWidget {
   const _InstitutionsTab({required this.provider});
   final ResearchProvider provider;
 
-  static const _color = Color(0xFFD97706);
+  static const _color = Color(0xFFB45309);
 
   @override
   Widget build(BuildContext context) {
@@ -522,10 +539,10 @@ class _InstitutionsTab extends StatelessWidget {
                   '${institutions.length} unique institutions identified.',
             )
           : null,
-      filterRow: const YearRangeFilter(),
+      filterRow: const FilterHeader(),
       sections: items.isEmpty
           ? [
-              const _ChartSection(
+              const SectionCard(
                 icon: Icons.account_balance_outlined,
                 iconColor: _color,
                 title: 'Institution Ranking',
@@ -589,7 +606,7 @@ class _PapersTab extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                const _AnalyticsFilterHeader(child: YearRangeFilter()),
+                const FilterHeader(),
                 const SizedBox(height: 14),
                 LayoutBuilder(builder: (context, constraints) {
                   const count = 3;
@@ -611,21 +628,21 @@ class _PapersTab extends StatelessWidget {
                         label: 'Total citations',
                         value: fmtDecimal.format(totalCit),
                         subtitle: 'across ${filtered.length} papers',
-                        iconColor: const Color(0xFFD97706),
+                        iconColor: const Color(0xFFB45309),
                       ),
                       MetricTile(
                         icon: Icons.emoji_events_outlined,
                         label: 'Highly cited',
                         value: '$highCit papers',
                         subtitle: '≥100 citations each',
-                        iconColor: const Color(0xFFEA580C),
+                        iconColor: const Color(0xFFC0504E),
                       ),
                       MetricTile(
                         icon: Icons.bar_chart_outlined,
                         label: 'Median cit.',
                         value: fmtCompact.format(medCit),
                         subtitle: 'per paper',
-                        iconColor: const Color(0xFF1D4ED8),
+                        iconColor: const Color(0xFF2E67B2),
                       ),
                     ],
                   );
@@ -633,7 +650,7 @@ class _PapersTab extends StatelessWidget {
                 const SizedBox(height: 10),
                 const InsightNote(
                   icon: Icons.sort,
-                  color: Color(0xFF1D4ED8),
+                  color: Color(0xFF2E67B2),
                   text:
                       'Sorted by total citation count. Tap any paper to read its abstract and metadata.',
                 ),
@@ -704,7 +721,7 @@ class _TabScaffold extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (filterRow != null) ...[
-                      _AnalyticsFilterHeader(child: filterRow!),
+                      filterRow!,
                       const SizedBox(height: 14),
                     ],
                     LayoutBuilder(builder: (context, constraints) {
@@ -781,7 +798,7 @@ class _DualSection extends StatelessWidget {
     return LayoutBuilder(builder: (context, constraints) {
       final isWide = constraints.maxWidth > 680;
 
-      final chart = _ChartSection(
+      final chart = SectionCard(
         icon: icon,
         iconColor: color,
         title: chartTitle,
@@ -789,7 +806,7 @@ class _DualSection extends StatelessWidget {
         child: chartChild,
       );
 
-      final rankList = _ChartSection(
+      final rankList = SectionCard(
         icon: Icons.format_list_numbered,
         iconColor: color,
         title: listTitle,
@@ -820,94 +837,6 @@ class _DualSection extends StatelessWidget {
         ],
       );
     });
-  }
-}
-
-/// Card wrapping a chart or list section — consistent with Dashboard card style.
-class _ChartSection extends StatelessWidget {
-  const _ChartSection({
-    required this.icon,
-    required this.iconColor,
-    required this.title,
-    required this.subtitle,
-    required this.child,
-  });
-
-  final IconData icon;
-  final Color iconColor;
-  final String title;
-  final String subtitle;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
-        side: const BorderSide(color: Color(0xFFE8EDF5)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              color: iconColor.withValues(alpha: 0.03),
-              border: Border(
-                top: BorderSide(color: iconColor, width: 2.5),
-                bottom: const BorderSide(color: Color(0xFFEEF2FF)),
-              ),
-            ),
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: iconColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(7),
-                  ),
-                  child: Icon(icon, size: 14, color: iconColor),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        title,
-                        style:
-                            Theme.of(context).textTheme.titleSmall?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                  color: const Color(0xFF1E293B),
-                                  fontSize: 13,
-                                ),
-                      ),
-                      Text(
-                        subtitle,
-                        style:
-                            Theme.of(context).textTheme.labelSmall?.copyWith(
-                                  color: const Color(0xFF94A3B8),
-                                  fontSize: 11,
-                                ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-            child: child,
-          ),
-        ],
-      ),
-    );
   }
 }
 
@@ -946,7 +875,7 @@ class _RankRow extends StatelessWidget {
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w800,
-                color: rank <= 3 ? color : const Color(0xFF94A3B8),
+                color: rank <= 3 ? color : const Color(0xFF8F8D84),
               ),
             ),
           ),
@@ -961,7 +890,7 @@ class _RankRow extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         fontWeight: FontWeight.w600,
-                        color: const Color(0xFF1E293B),
+                        color: const Color(0xFF222D3A),
                       ),
                 ),
                 const SizedBox(height: 3),
@@ -970,7 +899,7 @@ class _RankRow extends StatelessWidget {
                   child: LinearProgressIndicator(
                     value: pct,
                     minHeight: 4,
-                    backgroundColor: const Color(0xFFE2E8F0),
+                    backgroundColor: const Color(0xFFE6E2D8),
                     color: color.withValues(alpha: rank <= 3 ? 1.0 : 0.5),
                   ),
                 ),
@@ -982,7 +911,7 @@ class _RankRow extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: const Color(0xFFEEF2FF),
+                color: const Color(0xFFF3F1EA),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
@@ -1028,44 +957,3 @@ class _EmptyInline extends StatelessWidget {
   }
 }
 
-/// Inline filter header matching Dashboard and Trends style.
-class _AnalyticsFilterHeader extends StatelessWidget {
-  const _AnalyticsFilterHeader({required this.child});
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: const Color(0xFFEFF6FF),
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: const Color(0xFFBFDBFE)),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.calendar_month_outlined,
-                  size: 12, color: Color(0xFF1D4ED8)),
-              const SizedBox(width: 5),
-              Text(
-                'YEAR FILTER',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: const Color(0xFF1D4ED8),
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.6,
-                      fontSize: 10,
-                    ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(child: child),
-      ],
-    );
-  }
-}

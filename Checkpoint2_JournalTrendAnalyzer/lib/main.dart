@@ -3,9 +3,11 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 
 import 'app.dart';
-import 'providers/research_provider.dart';
-import 'repositories/publication_repository.dart';
-import 'services/openalex_service.dart';
+import 'features/research/data/datasources/openalex_service.dart';
+import 'features/research/data/repositories/publication_repository_impl.dart';
+import 'features/research/domain/usecases/get_year_counts.dart';
+import 'features/research/domain/usecases/search_publications.dart';
+import 'features/research/presentation/providers/research_provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -13,10 +15,15 @@ Future<void> main() async {
 
   runApp(
     ChangeNotifierProvider(
-      create: (_) => ResearchProvider(
-        repository: PublicationRepository(service: OpenAlexService()),
-      ),
-      child: const JournalTrendAnalyzerApp(),
+      create: (_) {
+        final repository =
+            PublicationRepositoryImpl(service: OpenAlexService());
+        return ResearchProvider(
+          searchPublications: SearchPublications(repository),
+          getYearCounts: GetYearCounts(repository),
+        );
+      },
+      child: const JournexaApp(),
     ),
   );
 }

@@ -4,9 +4,9 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
-import '../models/publication.dart';
-import '../models/trend_point.dart';
-import '../utils/analytics_calculator.dart';
+import 'package:journexa/features/research/data/models/publication.dart';
+import 'package:journexa/features/research/data/models/trend_point.dart';
+import 'package:journexa/features/research/domain/usecases/analytics_calculator.dart';
 
 class PublicationDetailScreen extends StatelessWidget {
   const PublicationDetailScreen({required this.publication, super.key});
@@ -14,10 +14,10 @@ class PublicationDetailScreen extends StatelessWidget {
   final Publication publication;
 
   static Color _citationColor(int count) {
-    if (count > 500) return const Color(0xFFD97706);
-    if (count > 50) return const Color(0xFF059669);
-    if (count > 5) return const Color(0xFF1D4ED8);
-    return const Color(0xFF64748B);
+    if (count > 500) return const Color(0xFFB45309);
+    if (count > 50) return const Color(0xFF12896B);
+    if (count > 5) return const Color(0xFF2E67B2);
+    return const Color(0xFF5D6672);
   }
 
   @override
@@ -65,7 +65,7 @@ class PublicationDetailScreen extends StatelessWidget {
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [Color(0xFF1D4ED8), Color(0xFF1E3A8A)],
+                  colors: [Color(0xFF0F5D4E), Color(0xFF0A4237)],
                 ),
               ),
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
@@ -87,7 +87,7 @@ class PublicationDetailScreen extends StatelessWidget {
                   const SizedBox(height: 10),
                   Text(
                     pub.title,
-                    style: GoogleFonts.plusJakartaSans(
+                    style: GoogleFonts.inter(
                       color: Colors.white,
                       fontSize: 17,
                       fontWeight: FontWeight.w700,
@@ -99,7 +99,7 @@ class PublicationDetailScreen extends StatelessWidget {
                     Text(
                       pub.authors.take(3).join(', ') +
                           (pub.authors.length > 3 ? ' et al.' : ''),
-                      style: GoogleFonts.plusJakartaSans(
+                      style: GoogleFonts.inter(
                         color: Colors.white.withValues(alpha: 0.8),
                         fontSize: 13,
                         fontStyle: FontStyle.italic,
@@ -195,7 +195,7 @@ class PublicationDetailScreen extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
                 child: _Section(
                   icon: Icons.account_balance_outlined,
-                  iconColor: const Color(0xFFD97706),
+                  iconColor: const Color(0xFFB45309),
                   title: 'Institutions (${pub.institutions.length})',
                   child: Wrap(
                     spacing: 6,
@@ -203,7 +203,7 @@ class PublicationDetailScreen extends StatelessWidget {
                     children: pub.institutions
                         .map((inst) => _TagChip(
                               label: inst,
-                              color: const Color(0xFFD97706),
+                              color: const Color(0xFFB45309),
                             ))
                         .toList(),
                   ),
@@ -216,7 +216,7 @@ class PublicationDetailScreen extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
                 child: _Section(
                   icon: Icons.label_outline,
-                  iconColor: const Color(0xFF0891B2),
+                  iconColor: const Color(0xFF1791B8),
                   title: 'Research Concepts',
                   child: Wrap(
                     spacing: 6,
@@ -224,7 +224,7 @@ class PublicationDetailScreen extends StatelessWidget {
                     children: pub.keywords
                         .map((kw) => _TagChip(
                               label: kw,
-                              color: const Color(0xFF0891B2),
+                              color: const Color(0xFF1791B8),
                             ))
                         .toList(),
                   ),
@@ -236,13 +236,13 @@ class PublicationDetailScreen extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
               child: _Section(
                 icon: Icons.article_outlined,
-                iconColor: const Color(0xFF475569),
+                iconColor: const Color(0xFF515A66),
                 title: 'Abstract',
                 child: Text(
                   pub.abstractText ?? 'No abstract available from OpenAlex.',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         height: 1.75,
-                        color: const Color(0xFF374151),
+                        color: const Color(0xFF3F4954),
                       ),
                 ),
               ),
@@ -271,19 +271,19 @@ class _MetaGrid extends StatelessWidget {
         Icons.calendar_today_outlined,
         'Year',
         publication.publicationYear?.toString() ?? 'Unknown',
-        const Color(0xFF059669),
+        const Color(0xFF12896B),
       ),
       (
         Icons.format_quote,
         'Citations',
         fmt.format(publication.citedByCount),
-        const Color(0xFFD97706),
+        const Color(0xFFB45309),
       ),
       (
         Icons.menu_book_outlined,
         'Venue',
         publication.journalName ?? 'Unknown venue',
-        const Color(0xFF7C3AED),
+        const Color(0xFF6D4FA3),
       ),
       (
         Icons.link,
@@ -340,7 +340,7 @@ class _MetaGrid extends StatelessWidget {
                           label.toUpperCase(),
                           style:
                               Theme.of(context).textTheme.labelSmall?.copyWith(
-                                    color: const Color(0xFF94A3B8),
+                                    color: const Color(0xFF8F8D84),
                                     fontWeight: FontWeight.w700,
                                     fontSize: 9,
                                     letterSpacing: 0.7,
@@ -354,7 +354,7 @@ class _MetaGrid extends StatelessWidget {
                           style: GoogleFonts.spaceGrotesk(
                             fontWeight: FontWeight.w700,
                             fontSize: 13,
-                            color: const Color(0xFF1E293B),
+                            color: const Color(0xFF222D3A),
                           ),
                         ),
                       ],
@@ -388,7 +388,7 @@ class _MiniLineChart extends StatelessWidget {
     final labelStyle = GoogleFonts.spaceGrotesk(
       fontSize: 10,
       fontWeight: FontWeight.w500,
-      color: const Color(0xFF94A3B8),
+      color: const Color(0xFF8F8D84),
     );
 
     final fmt = NumberFormat.compact();
@@ -420,8 +420,8 @@ class _MiniLineChart extends StatelessWidget {
         borderData: FlBorderData(
           show: true,
           border: const Border(
-            left: BorderSide(color: Color(0xFFDDE3F5)),
-            bottom: BorderSide(color: Color(0xFFDDE3F5)),
+            left: BorderSide(color: Color(0xFFE6E2D8)),
+            bottom: BorderSide(color: Color(0xFFE6E2D8)),
           ),
         ),
         titlesData: FlTitlesData(
@@ -539,7 +539,7 @@ class _Section extends StatelessWidget {
                   title,
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w700,
-                        color: const Color(0xFF1E293B),
+                        color: const Color(0xFF222D3A),
                       ),
                 ),
               ],

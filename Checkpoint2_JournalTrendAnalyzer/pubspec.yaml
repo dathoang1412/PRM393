@@ -1,4 +1,4 @@
-name: journal_trend_analyzer
+name: journexa
 description: A Flutter app for analyzing academic publication trends with OpenAlex.
 publish_to: "none"
 version: 1.0.0+1

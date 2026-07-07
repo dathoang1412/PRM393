@@ -5,12 +5,16 @@ class EmptyView extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.message,
+    this.actionLabel,
+    this.onAction,
     super.key,
   });
 
   final IconData icon;
   final String title;
   final String message;
+  final String? actionLabel;
+  final VoidCallback? onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +40,7 @@ class EmptyView extends StatelessWidget {
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFF1E293B),
+                    color: const Color(0xFF222D3A),
                   ),
             ),
             const SizedBox(height: 8),
@@ -44,10 +48,18 @@ class EmptyView extends StatelessWidget {
               message,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: const Color(0xFF64748B),
+                    color: const Color(0xFF5D6672),
                     height: 1.55,
                   ),
             ),
+            if (actionLabel != null && onAction != null) ...[
+              const SizedBox(height: 18),
+              OutlinedButton.icon(
+                onPressed: onAction,
+                icon: const Icon(Icons.search, size: 16),
+                label: Text(actionLabel!),
+              ),
+            ],
           ],
         ),
       ),

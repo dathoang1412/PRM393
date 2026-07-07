@@ -1,8 +1,8 @@
-# Journal Trend Analyzer
+# Journexa
 
 ## Overview
 
-Journal Trend Analyzer is a Flutter mobile application for exploring academic publication trends using live OpenAlex data.
+Journexa is a Flutter mobile application for exploring academic publication trends using live OpenAlex data.
 
 ## Features
 

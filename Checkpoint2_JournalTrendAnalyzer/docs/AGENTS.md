@@ -1,11 +1,11 @@
-# Agent Reference — Journal Trend Analyzer
+# Agent Reference — Journexa
 
 > Machine-readable project reference for AI agents. Use this file to quickly
 > understand the project structure without reading every source file.
 
 ## Quick Facts
 
-- **Name:** JournalTrendAnalyzer
+- **Name:** Journexa
 - **Languages:** Dart 3
 - **Frameworks:** Flutter, Provider, fl_chart, google_fonts, flutter_dotenv
 - **Files:** 24 source files
@@ -24,7 +24,7 @@
 
 ## Entry Points
 
-- `lib/main.dart` — Bootstrap: loads `.env`, wires DI, mounts `JournalTrendAnalyzerApp`
+- `lib/main.dart` — Bootstrap: loads `.env`, wires DI, mounts `JournexaApp`
 - `lib/screens/home_shell.dart` — Root navigation shell (renders Search/Dashboard/Analytics)
 
 ## Key Files (by connectivity)

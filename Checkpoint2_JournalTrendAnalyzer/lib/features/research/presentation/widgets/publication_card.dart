@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import '../models/publication.dart';
+import 'package:journexa/features/research/data/models/publication.dart';
 
 class PublicationCard extends StatefulWidget {
   const PublicationCard({
@@ -21,24 +21,24 @@ class _PublicationCardState extends State<PublicationCard> {
   bool _hovered = false;
 
   static Color _citationBg(int count) {
-    if (count > 500) return const Color(0xFFFEF3C7);
-    if (count > 50) return const Color(0xFFECFDF5);
-    if (count > 5) return const Color(0xFFEFF6FF);
-    return const Color(0xFFF1F5F9);
+    if (count > 500) return const Color(0xFFF7ECD9);
+    if (count > 50) return const Color(0xFFE7F2EC);
+    if (count > 5) return const Color(0xFFE7F1EC);
+    return const Color(0xFFF3F1EA);
   }
 
   static Color _citationFg(int count) {
     if (count > 500) return const Color(0xFFB45309);
-    if (count > 50) return const Color(0xFF047857);
-    if (count > 5) return const Color(0xFF1D4ED8);
-    return const Color(0xFF475569);
+    if (count > 50) return const Color(0xFF0E7258);
+    if (count > 5) return const Color(0xFF0F5D4E);
+    return const Color(0xFF515A66);
   }
 
   static Color _accentBar(int count) {
-    if (count > 500) return const Color(0xFFF59E0B);
-    if (count > 50) return const Color(0xFF10B981);
-    if (count > 5) return const Color(0xFF3B82F6);
-    return const Color(0xFFCBD5E1);
+    if (count > 500) return const Color(0xFFC98500);
+    if (count > 50) return const Color(0xFF12896B);
+    if (count > 5) return const Color(0xFF2E67B2);
+    return const Color(0xFFD8D4C8);
   }
 
   @override
@@ -62,7 +62,7 @@ class _PublicationCardState extends State<PublicationCard> {
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w700,
                   height: 1.35,
-                  color: const Color(0xFF0F172A),
+                  color: const Color(0xFF222D3A),
                 ),
           ),
           if (pub.authors.isNotEmpty) ...[
@@ -73,7 +73,7 @@ class _PublicationCardState extends State<PublicationCard> {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: const Color(0xFF64748B),
+                    color: const Color(0xFF5D6672),
                     fontStyle: FontStyle.italic,
                   ),
             ),
@@ -86,8 +86,8 @@ class _PublicationCardState extends State<PublicationCard> {
               _Chip(
                 icon: Icons.calendar_today_outlined,
                 label: pub.publicationYear?.toString() ?? 'N/A',
-                bgColor: const Color(0xFFEFF6FF),
-                fgColor: const Color(0xFF1D4ED8),
+                bgColor: const Color(0xFFE7F1EC),
+                fgColor: const Color(0xFF0F5D4E),
               ),
               _Chip(
                 icon: Icons.format_quote,
@@ -99,8 +99,8 @@ class _PublicationCardState extends State<PublicationCard> {
                 _Chip(
                   icon: Icons.menu_book_outlined,
                   label: pub.journalName!,
-                  bgColor: const Color(0xFFF5F3FF),
-                  fgColor: const Color(0xFF6D28D9),
+                  bgColor: const Color(0xFFEFECF5),
+                  fgColor: const Color(0xFF6D4FA3),
                 ),
             ],
           ),
@@ -122,7 +122,7 @@ class _PublicationCardState extends State<PublicationCard> {
             border: Border.all(
               color: _hovered
                   ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.4)
-                  : const Color(0xFFE2E8F0),
+                  : const Color(0xFFE6E2D8),
             ),
             boxShadow: _hovered
                 ? [

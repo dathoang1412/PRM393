@@ -17,7 +17,7 @@ class InsightNote extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = color ?? const Color(0xFF1D4ED8);
+    final c = color ?? const Color(0xFF0F5D4E);
 
     // ClipRRect + Container(Border.all uniform) avoids the Flutter restriction
     // that borderRadius requires uniform border colors.
@@ -65,7 +65,7 @@ class InsightNote extends StatelessWidget {
                                           .textTheme
                                           .bodySmall
                                           ?.copyWith(
-                                            color: const Color(0xFF374151),
+                                            color: const Color(0xFF3F4954),
                                             height: 1.55,
                                           ),
                                     ),
@@ -78,7 +78,7 @@ class InsightNote extends StatelessWidget {
                                     .textTheme
                                     .bodySmall
                                     ?.copyWith(
-                                      color: const Color(0xFF374151),
+                                      color: const Color(0xFF3F4954),
                                       height: 1.55,
                                     ),
                               ),

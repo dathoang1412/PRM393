@@ -1,10 +1,10 @@
-# Journal Trend Analyzer — Giải thích App
+# Journexa — Giải thích App
 
 > Tài liệu này giải thích app hiện tại đang hoạt động như thế nào: màn hình nào làm gì, dữ liệu lấy từ đâu, và các chart/tính năng được implement ra sao. Viết dựa trên code thực tế trong `lib/`, không phải bản thiết kế ban đầu.
 
 ## 1. App là gì
 
-**Journal Trend Analyzer** là app Flutter giúp người dùng nhập 1 từ khóa nghiên cứu (ví dụ "Machine Learning"), sau đó tự động:
+**Journexa** là app Flutter giúp người dùng nhập 1 từ khóa nghiên cứu (ví dụ "Machine Learning"), sau đó tự động:
 - Lấy tối đa 100 bài báo khoa học liên quan từ [OpenAlex API](https://openalex.org) (sắp xếp theo số citation giảm dần).
 - Phân tích và hiển thị: xu hướng công bố theo năm, top journal, top tác giả, top từ khóa, top institution, top quốc gia, bài báo ảnh hưởng nhất.
 - Cho phép lọc theo khoảng năm và export dữ liệu ra CSV.

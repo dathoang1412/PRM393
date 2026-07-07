@@ -3,34 +3,45 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/research_provider.dart';
-import '../utils/analytics_calculator.dart';
-import '../widgets/empty_view.dart';
-import '../widgets/horizontal_bar_chart.dart';
-import '../widgets/insight_note.dart';
-import '../widgets/metric_tile.dart';
+import 'package:journexa/features/research/domain/usecases/analytics_calculator.dart';
+import 'package:journexa/core/widgets/empty_view.dart';
+import 'package:journexa/core/widgets/horizontal_bar_chart.dart';
+import 'package:journexa/core/widgets/insight_note.dart';
+import 'package:journexa/core/widgets/metric_tile.dart';
+import 'package:journexa/core/widgets/section_card.dart';
+import '../widgets/filter_header.dart';
 import '../widgets/trend_chart.dart';
-import '../widgets/year_range_filter.dart';
 
 const _kGap = 16.0;
 const _kGapSm = 10.0;
 const _kMaxW = 1400.0;
 const _kChartH = 252.0;
 
+/// Trend-analysis tab body — hosted inside [TrendsHubScreen], which owns
+/// the app bar, context bar, and CSV export.
 class TrendsScreen extends StatelessWidget {
-  const TrendsScreen({super.key});
+  const TrendsScreen({this.onChangeTopic, super.key});
+
+  /// Switches back to the Research tab from the empty state.
+  final VoidCallback? onChangeTopic;
 
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<ResearchProvider>();
 
     if (provider.publications.isEmpty) {
-      return const EmptyView(
+      return EmptyView(
         icon: Icons.trending_up,
         title: 'No trends yet',
         message: 'Search a topic to explore publication and citation trends.',
+        actionLabel: onChangeTopic != null ? 'Search a topic' : null,
+        onAction: onChangeTopic,
       );
     }
+    return _buildBody(context, provider);
+  }
 
+  Widget _buildBody(BuildContext context, ResearchProvider provider) {
     final filtered = provider.filteredPublications;
     final trends = provider.trends;
     final citTrends = provider.citationTrends;
@@ -69,7 +80,7 @@ class TrendsScreen extends StatelessWidget {
                     final isMed = w > 560;
 
                     // ── Year filter header ─────────────────────────────────
-                    const filterSection = _FilterRow();
+                    const filterSection = FilterHeader();
 
                     // ── KPI tiles ──────────────────────────────────────────
                     final isPositive = growthRate >= 0;
@@ -95,19 +106,22 @@ class TrendsScreen extends StatelessWidget {
                       children: [
                         MetricTile(
                           icon: Icons.article_outlined,
-                          label: 'Publications',
-                          value: fmtDecimal.format(filtered.length),
-                          subtitle: yearRange != null
-                              ? '${yearRange.min}–${yearRange.max}'
-                              : null,
-                          iconColor: const Color(0xFF1D4ED8),
+                          label: 'Total works',
+                          value:
+                              fmtDecimal.format(provider.totalWorksInRange),
+                          subtitle: provider.hasCorpusTrends
+                              ? 'matching this topic'
+                              : (yearRange != null
+                                  ? '${yearRange.min}–${yearRange.max}'
+                                  : null),
+                          iconColor: const Color(0xFF2E67B2),
                         ),
                         MetricTile(
                           icon: Icons.format_quote,
                           label: 'Total citations',
                           value: fmtCompact.format(totalCit),
                           subtitle: 'across all papers',
-                          iconColor: const Color(0xFFD97706),
+                          iconColor: const Color(0xFFB45309),
                         ),
                         MetricTile(
                           icon: Icons.calendar_today_outlined,
@@ -116,7 +130,7 @@ class TrendsScreen extends StatelessWidget {
                           subtitle: peakYear != null
                               ? '${peakYear.count} papers'
                               : null,
-                          iconColor: const Color(0xFF059669),
+                          iconColor: const Color(0xFF12896B),
                         ),
                         MetricTile(
                           icon: isPositive
@@ -126,8 +140,8 @@ class TrendsScreen extends StatelessWidget {
                           value: growthLabel,
                           subtitle: 'vs prior 5 years',
                           iconColor: isPositive
-                              ? const Color(0xFF059669)
-                              : const Color(0xFFDC2626),
+                              ? const Color(0xFF12896B)
+                              : const Color(0xFFB42318),
                         ),
                       ],
                     );
@@ -140,8 +154,8 @@ class TrendsScreen extends StatelessWidget {
                             ? Icons.trending_up
                             : Icons.trending_down,
                         color: isPositive
-                            ? const Color(0xFF059669)
-                            : const Color(0xFFDC2626),
+                            ? const Color(0xFF12896B)
+                            : const Color(0xFFB42318),
                         text: isPositive
                             ? 'Publication output grew ${growthRate.abs().toStringAsFixed(0)}% in the last 5 years (${DateTime.now().year - 4}–${DateTime.now().year}) compared to the prior 5-year period.'
                             : 'Publication output declined ${growthRate.abs().toStringAsFixed(0)}% in the last 5 years. This may reflect research focus shifts or data coverage limits.',
@@ -149,32 +163,34 @@ class TrendsScreen extends StatelessWidget {
                     }
 
                     // ── Chart cards ────────────────────────────────────────
-                    final pubChart = _Section(
+                    final pubChart = SectionCard(
                       icon: Icons.show_chart,
-                      iconColor: const Color(0xFF1D4ED8),
+                      iconColor: const Color(0xFF2E67B2),
                       title: 'Publication Activity',
-                      subtitle: 'Number of papers published per year',
+                      subtitle: provider.hasCorpusTrends
+                          ? 'Papers per year — all matching works on OpenAlex'
+                          : 'Papers per year (loaded results)',
                       child: SizedBox(
                         height: _kChartH,
                         child: TrendChart(
                           points: trends,
-                          color: const Color(0xFF1D4ED8),
+                          color: const Color(0xFF2E67B2),
                         ),
                       ),
                     );
 
                     final citChart = citTrends.isNotEmpty
-                        ? _Section(
+                        ? SectionCard(
                             icon: Icons.format_quote,
-                            iconColor: const Color(0xFFD97706),
+                            iconColor: const Color(0xFFB45309),
                             title: 'Citation Activity',
                             subtitle:
-                                'Total citations received per calendar year',
+                                'Citations per year — top-cited loaded papers',
                             child: SizedBox(
                               height: _kChartH,
                               child: TrendChart(
                                 points: citTrends,
-                                color: const Color(0xFFD97706),
+                                color: const Color(0xFFB45309),
                                 unit: 'citations',
                               ),
                             ),
@@ -182,29 +198,29 @@ class TrendsScreen extends StatelessWidget {
                         : null;
 
                     final kwChart = keywords.isNotEmpty
-                        ? _Section(
+                        ? SectionCard(
                             icon: Icons.label_outline,
-                            iconColor: const Color(0xFF7C3AED),
+                            iconColor: const Color(0xFF6D4FA3),
                             title: 'Top Research Keywords',
                             subtitle: 'Most frequent OpenAlex concepts',
                             child: HorizontalBarChart(
                               items: keywords,
-                              color: const Color(0xFF7C3AED),
+                              color: const Color(0xFF6D4FA3),
                               maxItems: 15,
                             ),
                           )
                         : null;
 
                     final ctryChart = countries.isNotEmpty
-                        ? _Section(
+                        ? SectionCard(
                             icon: Icons.public_outlined,
-                            iconColor: const Color(0xFF059669),
+                            iconColor: const Color(0xFF12896B),
                             title: 'Research by Country',
                             subtitle:
                                 'Publications by author country of affiliation',
                             child: HorizontalBarChart(
                               items: countries,
-                              color: const Color(0xFF059669),
+                              color: const Color(0xFF12896B),
                               maxItems: 15,
                             ),
                           )
@@ -285,137 +301,6 @@ class TrendsScreen extends StatelessWidget {
         ),
         const SliverPadding(padding: EdgeInsets.only(bottom: 28)),
       ],
-    );
-  }
-}
-
-// ── Filter row ────────────────────────────────────────────────────────────────
-
-class _FilterRow extends StatelessWidget {
-  const _FilterRow();
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: const Color(0xFFEFF6FF),
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: const Color(0xFFBFDBFE)),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.calendar_month_outlined,
-                  size: 12, color: Color(0xFF1D4ED8)),
-              const SizedBox(width: 5),
-              Text(
-                'YEAR FILTER',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: const Color(0xFF1D4ED8),
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.6,
-                      fontSize: 10,
-                    ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 10),
-        const Expanded(child: YearRangeFilter()),
-      ],
-    );
-  }
-}
-
-// ── Section card ──────────────────────────────────────────────────────────────
-
-class _Section extends StatelessWidget {
-  const _Section({
-    required this.icon,
-    required this.iconColor,
-    required this.title,
-    required this.subtitle,
-    required this.child,
-  });
-
-  final IconData icon;
-  final Color iconColor;
-  final String title;
-  final String subtitle;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
-        side: const BorderSide(color: Color(0xFFE8EDF5)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              color: iconColor.withValues(alpha: 0.03),
-              border: Border(
-                top: BorderSide(color: iconColor, width: 2.5),
-                bottom: const BorderSide(color: Color(0xFFEEF2FF)),
-              ),
-            ),
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: iconColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(7),
-                  ),
-                  child: Icon(icon, size: 14, color: iconColor),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        title,
-                        style:
-                            Theme.of(context).textTheme.titleSmall?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                  color: const Color(0xFF1E293B),
-                                  fontSize: 13,
-                                ),
-                      ),
-                      Text(
-                        subtitle,
-                        style:
-                            Theme.of(context).textTheme.labelSmall?.copyWith(
-                                  color: const Color(0xFF94A3B8),
-                                  fontSize: 11,
-                                ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-            child: child,
-          ),
-        ],
-      ),
     );
   }
 }

@@ -104,7 +104,7 @@ class _DonutChartState extends State<DonutChart> {
                     : (widget.centerLabel ?? 'Total'),
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: const Color(0xFF94A3B8),
+                  color: const Color(0xFF8F8D84),
                   fontSize: 10,
                 ),
               ),
@@ -144,8 +144,8 @@ class _DonutChartState extends State<DonutChart> {
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: isTouched
-                        ? const Color(0xFF1E293B)
-                        : const Color(0xFF64748B),
+                        ? const Color(0xFF222D3A)
+                        : const Color(0xFF5D6672),
                     fontWeight: isTouched ? FontWeight.w700 : FontWeight.w500,
                     fontSize: 11,
                   ),

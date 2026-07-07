@@ -6,7 +6,7 @@
 
 ### `lib/main.dart`
 
-**Summary:** Entry point. Loads `.env`, manually wires the DI chain, mounts `JournalTrendAnalyzerApp` inside a `ChangeNotifierProvider`.
+**Summary:** Entry point. Loads `.env`, manually wires the DI chain, mounts `JournexaApp` inside a `ChangeNotifierProvider`.
 **Complexity:** low | **Tags:** entry-point, di, bootstrap
 
 **Key functions:** `main()`
@@ -22,7 +22,7 @@
 **Summary:** Defines the root `MaterialApp` with a complete Material 3 design system: color scheme, Fira Sans body font, Fira Code data font, and custom themes for Card, Chip, TabBar, InputDecoration, and ElevatedButton.
 **Complexity:** medium | **Tags:** ui, theme, config
 
-**Key class:** `JournalTrendAnalyzerApp`
+**Key class:** `JournexaApp`
 
 **Design tokens:**
 | Token | Value | Usage |
@@ -40,4 +40,4 @@
 ## Layer Relationships
 
 Config is the root of the dependency graph. `main.dart` constructs all other layers
-and passes them to `JournalTrendAnalyzerApp`. No other layer imports from Config.
+and passes them to `JournexaApp`. No other layer imports from Config.

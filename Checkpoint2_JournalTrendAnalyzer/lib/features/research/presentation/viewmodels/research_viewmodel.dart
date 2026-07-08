@@ -11,14 +11,15 @@ import 'package:journexa/features/research/data/models/keyword_stat.dart';
 import 'package:journexa/features/research/data/models/publication.dart';
 import 'package:journexa/features/research/data/models/trend_point.dart';
 import 'package:journexa/core/error/openalex_exception.dart';
+import 'package:journexa/core/firebase/analytics_service.dart';
 import 'package:journexa/features/research/domain/usecases/analytics_calculator.dart';
 import 'package:journexa/features/research/domain/usecases/get_year_counts.dart';
 import 'package:journexa/features/research/domain/usecases/search_publications.dart';
 
 enum ResearchStatus { idle, loading, success, empty, error }
 
-class ResearchProvider extends ChangeNotifier {
-  ResearchProvider({
+class ResearchViewModel extends ChangeNotifier {
+  ResearchViewModel({
     required SearchPublications searchPublications,
     required GetYearCounts getYearCounts,
   })  : _searchPublications = searchPublications,
@@ -157,6 +158,7 @@ class ResearchProvider extends ChangeNotifier {
       return;
     }
 
+    AnalyticsService.instance.logSearchTopic(nextKeyword);
     _keyword = nextKeyword;
     _status = ResearchStatus.loading;
     _errorMessage = null;

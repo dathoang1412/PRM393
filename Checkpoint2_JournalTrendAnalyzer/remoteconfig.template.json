@@ -1,0 +1,19 @@
+{
+  "parameters": {
+    "max_journals": {
+      "defaultValue": {
+        "value": "10"
+      },
+      "description": "Number of journals shown in the Journals ranking screens.",
+      "valueType": "NUMBER"
+    },
+    "max_keywords": {
+      "defaultValue": {
+        "value": "15"
+      },
+      "description": "Number of keywords shown in the Keywords ranking screens.",
+      "valueType": "NUMBER"
+    }
+  },
+  "parameterGroups": {}
+}

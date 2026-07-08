@@ -1,0 +1,6 @@
+{
+  "flutter": {"platforms":{"android":{"default":{"projectId":"my-awesome-prj-141205","appId":"1:882062577937:android:1643a6ebc3ec6e24d97cb0","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"my-awesome-prj-141205","configurations":{"android":"1:882062577937:android:1643a6ebc3ec6e24d97cb0"}}}}},
+  "remoteconfig": {
+    "template": "remoteconfig.template.json"
+  }
+}

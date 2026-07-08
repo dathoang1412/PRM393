@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "882062577937",
+    "project_id": "my-awesome-prj-141205",
+    "storage_bucket": "my-awesome-prj-141205.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:882062577937:android:1643a6ebc3ec6e24d97cb0",
+        "android_client_info": {
+          "package_name": "com.example.journal_trend_analyzer"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBrbVpcqQe7vwyaKTAwRxxa2v6nnehIcUE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

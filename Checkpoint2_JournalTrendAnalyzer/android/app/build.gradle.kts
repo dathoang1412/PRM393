@@ -4,6 +4,14 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// Firebase plugins are applied only once google-services.json exists, so the
+// app still builds (in offline/guest mode) before Firebase is configured.
+// See FIREBASE_SETUP.md.
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+    apply(plugin = "com.google.firebase.crashlytics")
+}
+
 android {
     namespace = "com.example.journal_trend_analyzer"
     compileSdk = flutter.compileSdkVersion
@@ -19,6 +27,7 @@ android {
         applicationId = "com.example.journal_trend_analyzer"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
+        // Firebase Auth requires API 23+.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode

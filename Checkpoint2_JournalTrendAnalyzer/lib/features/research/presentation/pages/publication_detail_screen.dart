@@ -3,15 +3,50 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import 'package:journexa/core/firebase/analytics_service.dart';
 import 'package:journexa/features/research/data/models/publication.dart';
 import 'package:journexa/features/research/data/models/trend_point.dart';
 import 'package:journexa/features/research/domain/usecases/analytics_calculator.dart';
 
-class PublicationDetailScreen extends StatelessWidget {
+class PublicationDetailScreen extends StatefulWidget {
   const PublicationDetailScreen({required this.publication, super.key});
 
   final Publication publication;
+
+  @override
+  State<PublicationDetailScreen> createState() =>
+      _PublicationDetailScreenState();
+}
+
+class _PublicationDetailScreenState extends State<PublicationDetailScreen> {
+  @override
+  void initState() {
+    super.initState();
+    AnalyticsService.instance.logViewPublication(
+      widget.publication.title,
+      widget.publication.publicationYear,
+    );
+  }
+
+  /// Opens the original publication — the DOI when available, otherwise the
+  /// OpenAlex record page.
+  Future<void> _openOriginal() async {
+    final pub = widget.publication;
+    final url = pub.doi ?? pub.id;
+    final uri = Uri.tryParse(url);
+    final opened = uri != null &&
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not open the publication link'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
 
   static Color _citationColor(int count) {
     if (count > 500) return const Color(0xFFB45309);
@@ -23,7 +58,7 @@ class PublicationDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final pub = publication;
+    final pub = widget.publication;
     final fmt = NumberFormat.decimalPattern();
     final citColor = _citationColor(pub.citedByCount);
 
@@ -37,6 +72,11 @@ class PublicationDetailScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Publication Details'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.open_in_new),
+            tooltip: 'View original publication',
+            onPressed: _openOriginal,
+          ),
           if (pub.doi != null)
             IconButton(
               icon: const Icon(Icons.copy_outlined),
@@ -54,6 +94,14 @@ class PublicationDetailScreen extends StatelessWidget {
             ),
           const SizedBox(width: 4),
         ],
+      ),
+      bottomNavigationBar: SafeArea(
+        minimum: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+        child: ElevatedButton.icon(
+          onPressed: _openOriginal,
+          icon: const Icon(Icons.open_in_new, size: 18),
+          label: const Text('View original publication'),
+        ),
       ),
       body: SelectionArea(
         child: ListView(

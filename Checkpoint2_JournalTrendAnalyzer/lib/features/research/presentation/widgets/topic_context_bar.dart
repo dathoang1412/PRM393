@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'package:journexa/core/theme/app_colors.dart';
-import '../providers/research_provider.dart';
+import '../viewmodels/research_viewmodel.dart';
 
 /// A slim strip under the app bar that keeps the current search context
 /// visible on analytics screens: which topic is loaded, how many papers,
@@ -14,7 +14,7 @@ class TopicContextBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<ResearchProvider>();
+    final provider = context.watch<ResearchViewModel>();
     if (provider.keyword.isEmpty) return const SizedBox.shrink();
 
     return Container(

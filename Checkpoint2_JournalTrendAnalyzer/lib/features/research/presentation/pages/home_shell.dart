@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
 import 'package:journexa/core/theme/app_colors.dart';
-import '../providers/research_provider.dart';
-import 'analytics_screen.dart';
 import 'home_screen.dart';
+import 'journals_screen.dart';
+import 'keywords_screen.dart';
 import 'profile_screen.dart';
-import 'search_screen.dart';
-import 'trends_hub_screen.dart';
 
+/// Main shell (Lab 03 spec §3): bottom navigation with Home, Journals,
+/// Keywords, and Profile.
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
 
@@ -22,48 +21,13 @@ class _HomeShellState extends State<HomeShell> {
   static const _kDesktopBreak = 800.0;
 
   Widget _buildScreen() => switch (_selectedIndex) {
-        0 => HomeScreen(
-            onOpenResearch: () => _onSelect(1),
-            onOpenTrends: () => _onSelect(2),
-            onOpenRankings: _openRankings,
-            onSearchTopic: _searchFromHome,
-          ),
-        1 => SearchScreen(
-            onViewDashboard: () => _onSelect(2),
-            onOpenRankings: () => _openRankings(0),
-          ),
-        2 => TrendsHubScreen(
-            onChangeTopic: () => _onSelect(1),
-            onOpenRankings: () => _openRankings(0),
-          ),
+        0 => const HomeScreen(),
+        1 => JournalsScreen(onSearchTopic: () => _onSelect(0)),
+        2 => KeywordsScreen(onSearchTopic: () => _onSelect(0)),
         _ => const ProfileScreen(),
       };
 
   void _onSelect(int index) => setState(() => _selectedIndex = index);
-
-  /// Kicks off a live search for a trending topic, then lands the user on
-  /// the Research tab where the loading state and results appear.
-  void _searchFromHome(String topic) {
-    context.read<ResearchProvider>().search(topic);
-    _onSelect(1);
-  }
-
-  /// Rankings is not a nav destination — it opens as a pushed route (with a
-  /// back button), keeping the bottom bar to the four main pages.
-  /// [initialTab] deep-links to a specific ranking (0 Journals, 1 Authors, …).
-  void _openRankings(int initialTab) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => AnalyticsScreen(
-          initialTab: initialTab,
-          onChangeTopic: () {
-            Navigator.of(context).pop();
-            _onSelect(1);
-          },
-        ),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -116,14 +80,14 @@ class _HomeShellState extends State<HomeShell> {
                 label: Text('Home'),
               ),
               NavigationRailDestination(
-                icon: Icon(Icons.travel_explore_outlined),
-                selectedIcon: Icon(Icons.travel_explore),
-                label: Text('Research'),
+                icon: Icon(Icons.menu_book_outlined),
+                selectedIcon: Icon(Icons.menu_book),
+                label: Text('Journals'),
               ),
               NavigationRailDestination(
-                icon: Icon(Icons.show_chart_outlined),
-                selectedIcon: Icon(Icons.show_chart),
-                label: Text('Trends'),
+                icon: Icon(Icons.label_outline),
+                selectedIcon: Icon(Icons.label),
+                label: Text('Keywords'),
               ),
               NavigationRailDestination(
                 icon: Icon(Icons.person_outline),
@@ -156,14 +120,14 @@ class _HomeShellState extends State<HomeShell> {
               label: 'Home',
             ),
             NavigationDestination(
-              icon: Icon(Icons.travel_explore_outlined),
-              selectedIcon: Icon(Icons.travel_explore),
-              label: 'Research',
+              icon: Icon(Icons.menu_book_outlined),
+              selectedIcon: Icon(Icons.menu_book),
+              label: 'Journals',
             ),
             NavigationDestination(
-              icon: Icon(Icons.show_chart_outlined),
-              selectedIcon: Icon(Icons.show_chart),
-              label: 'Trends',
+              icon: Icon(Icons.label_outline),
+              selectedIcon: Icon(Icons.label),
+              label: 'Keywords',
             ),
             NavigationDestination(
               icon: Icon(Icons.person_outline),

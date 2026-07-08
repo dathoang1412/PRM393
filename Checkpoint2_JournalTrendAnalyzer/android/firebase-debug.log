@@ -1,0 +1,46 @@
+[debug] [2026-07-08T08:48:42.369Z] ----------------------------------------------------------------------
+[debug] [2026-07-08T08:48:42.381Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\ASUS\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js apps:sdkconfig ANDROID 1:882062577937:android:1643a6ebc3ec6e24d97cb0 --project=my-awesome-prj-141205 --out android/app/google-services.json
+[debug] [2026-07-08T08:48:42.381Z] CLI Version:   15.22.4
+[debug] [2026-07-08T08:48:42.381Z] Platform:      win32
+[debug] [2026-07-08T08:48:42.382Z] Node Version:  v26.2.0
+[debug] [2026-07-08T08:48:42.382Z] Detected Agent: unknown
+[debug] [2026-07-08T08:48:42.382Z] Time:          Wed Jul 08 2026 15:48:42 GMT+0700 (Indochina Time)
+[debug] [2026-07-08T08:48:42.382Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-07-08T08:48:42.585Z] Object "" in "firebase.json" has unknown property: {"additionalProperty":"flutter"}
+[debug] [2026-07-08T08:48:42.590Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-07-08T08:48:42.594Z] > authorizing via signed-in user (jezzthedead@gmail.com)
+[debug] [2026-07-08T08:48:42.599Z] Checked if tokens are valid: true, expires at: 1783502585091
+[debug] [2026-07-08T08:48:42.599Z] Checked if tokens are valid: true, expires at: 1783502585091
+[debug] [2026-07-08T08:48:42.600Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/-/androidApps/1:882062577937:android:1643a6ebc3ec6e24d97cb0/config [none]
+[debug] [2026-07-08T08:48:44.236Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/-/androidApps/1:882062577937:android:1643a6ebc3ec6e24d97cb0/config 200
+[debug] [2026-07-08T08:48:44.237Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/-/androidApps/1:882062577937:android:1643a6ebc3ec6e24d97cb0/config {"configFilename":"google-services.json","configFileContents":"ewogICJwcm9qZWN0X2luZm8iOiB7CiAgICAicHJvamVjdF9udW1iZXIiOiAiODgyMDYyNTc3OTM3IiwKICAgICJwcm9qZWN0X2lkIjogIm15LWF3ZXNvbWUtcHJqLTE0MTIwNSIsCiAgICAic3RvcmFnZV9idWNrZXQiOiAibXktYXdlc29tZS1wcmotMTQxMjA1LmZpcmViYXNlc3RvcmFnZS5hcHAiCiAgfSwKICAiY2xpZW50IjogWwogICAgewogICAgICAiY2xpZW50X2luZm8iOiB7CiAgICAgICAgIm1vYmlsZXNka19hcHBfaWQiOiAiMTo4ODIwNjI1Nzc5Mzc6YW5kcm9pZDoxNjQzYTZlYmMzZWM2ZTI0ZDk3Y2IwIiwKICAgICAgICAiYW5kcm9pZF9jbGllbnRfaW5mbyI6IHsKICAgICAgICAgICJwYWNrYWdlX25hbWUiOiAiY29tLmV4YW1wbGUuam91cm5hbF90cmVuZF9hbmFseXplciIKICAgICAgICB9CiAgICAgIH0sCiAgICAgICJvYXV0aF9jbGllbnQiOiBbXSwKICAgICAgImFwaV9rZXkiOiBbCiAgICAgICAgewogICAgICAgICAgImN1cnJlbnRfa2V5IjogIkFJemFTeUJyYlZwY3FRZTd2d3lhS1RBd1J4eGEydjZubmVoSWNVRSIKICAgICAgICB9CiAgICAgIF0sCiAgICAgICJzZXJ2aWNlcyI6IHsKICAgICAgICAiYXBwaW52aXRlX3NlcnZpY2UiOiB7CiAgICAgICAgICAib3RoZXJfcGxhdGZvcm1fb2F1dGhfY2xpZW50IjogW10KICAgICAgICB9CiAgICAgIH0KICAgIH0KICBdLAogICJjb25maWd1cmF0aW9uX3ZlcnNpb24iOiAiMSIKfQ=="}
+[debug] [2026-07-08T08:48:44.496Z] Error: ENOENT: no such file or directory, open 'D:\user2\PRM393\Checkpoint2_JournalTrendAnalyzer\android\android\app\google-services.json'
+    at Object.writeFileSync (node:fs:2406:20)
+    at Command.actionFn (C:\Users\ASUS\AppData\Roaming\npm\node_modules\firebase-tools\lib\commands\apps-sdkconfig.js:95:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2026-07-08T08:50:56.913Z] ----------------------------------------------------------------------
+[debug] [2026-07-08T08:50:56.916Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\ASUS\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js apps:sdkconfig ANDROID 1:882062577937:android:1643a6ebc3ec6e24d97cb0 --project=my-awesome-prj-141205 --out android/app/google-services.json
+[debug] [2026-07-08T08:50:56.917Z] CLI Version:   15.22.4
+[debug] [2026-07-08T08:50:56.920Z] Platform:      win32
+[debug] [2026-07-08T08:50:56.920Z] Node Version:  v26.2.0
+[debug] [2026-07-08T08:50:56.920Z] Detected Agent: unknown
+[debug] [2026-07-08T08:50:56.920Z] Time:          Wed Jul 08 2026 15:50:56 GMT+0700 (Indochina Time)
+[debug] [2026-07-08T08:50:56.920Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-07-08T08:50:57.114Z] Object "" in "firebase.json" has unknown property: {"additionalProperty":"flutter"}
+[debug] [2026-07-08T08:50:57.119Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-07-08T08:50:57.119Z] > authorizing via signed-in user (jezzthedead@gmail.com)
+[debug] [2026-07-08T08:50:57.123Z] Checked if tokens are valid: true, expires at: 1783502585091
+[debug] [2026-07-08T08:50:57.123Z] Checked if tokens are valid: true, expires at: 1783502585091
+[debug] [2026-07-08T08:50:57.124Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/-/androidApps/1:882062577937:android:1643a6ebc3ec6e24d97cb0/config [none]
+[debug] [2026-07-08T08:50:59.089Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/-/androidApps/1:882062577937:android:1643a6ebc3ec6e24d97cb0/config 200
+[debug] [2026-07-08T08:50:59.090Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/-/androidApps/1:882062577937:android:1643a6ebc3ec6e24d97cb0/config {"configFilename":"google-services.json","configFileContents":"ewogICJwcm9qZWN0X2luZm8iOiB7CiAgICAicHJvamVjdF9udW1iZXIiOiAiODgyMDYyNTc3OTM3IiwKICAgICJwcm9qZWN0X2lkIjogIm15LWF3ZXNvbWUtcHJqLTE0MTIwNSIsCiAgICAic3RvcmFnZV9idWNrZXQiOiAibXktYXdlc29tZS1wcmotMTQxMjA1LmZpcmViYXNlc3RvcmFnZS5hcHAiCiAgfSwKICAiY2xpZW50IjogWwogICAgewogICAgICAiY2xpZW50X2luZm8iOiB7CiAgICAgICAgIm1vYmlsZXNka19hcHBfaWQiOiAiMTo4ODIwNjI1Nzc5Mzc6YW5kcm9pZDoxNjQzYTZlYmMzZWM2ZTI0ZDk3Y2IwIiwKICAgICAgICAiYW5kcm9pZF9jbGllbnRfaW5mbyI6IHsKICAgICAgICAgICJwYWNrYWdlX25hbWUiOiAiY29tLmV4YW1wbGUuam91cm5hbF90cmVuZF9hbmFseXplciIKICAgICAgICB9CiAgICAgIH0sCiAgICAgICJvYXV0aF9jbGllbnQiOiBbXSwKICAgICAgImFwaV9rZXkiOiBbCiAgICAgICAgewogICAgICAgICAgImN1cnJlbnRfa2V5IjogIkFJemFTeUJyYlZwY3FRZTd2d3lhS1RBd1J4eGEydjZubmVoSWNVRSIKICAgICAgICB9CiAgICAgIF0sCiAgICAgICJzZXJ2aWNlcyI6IHsKICAgICAgICAiYXBwaW52aXRlX3NlcnZpY2UiOiB7CiAgICAgICAgICAib3RoZXJfcGxhdGZvcm1fb2F1dGhfY2xpZW50IjogW10KICAgICAgICB9CiAgICAgIH0KICAgIH0KICBdLAogICJjb25maWd1cmF0aW9uX3ZlcnNpb24iOiAiMSIKfQ=="}
+[debug] [2026-07-08T08:50:59.411Z] Error: ENOENT: no such file or directory, open 'D:\user2\PRM393\Checkpoint2_JournalTrendAnalyzer\android\android\app\google-services.json'
+    at Object.writeFileSync (node:fs:2406:20)
+    at Command.actionFn (C:\Users\ASUS\AppData\Roaming\npm\node_modules\firebase-tools\lib\commands\apps-sdkconfig.js:95:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+[error] 
+[error] Error: An unexpected error has occurred.

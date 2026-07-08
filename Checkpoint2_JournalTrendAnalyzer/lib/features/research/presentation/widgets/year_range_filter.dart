@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../providers/research_provider.dart';
+import '../viewmodels/research_viewmodel.dart';
 
 /// Horizontal scrolling chip row for filtering analytics by publication year.
 class YearRangeFilter extends StatelessWidget {
@@ -9,7 +9,7 @@ class YearRangeFilter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<ResearchProvider>();
+    final provider = context.watch<ResearchViewModel>();
     final primary = Theme.of(context).colorScheme.primary;
     final curYear = DateTime.now().year;
 
@@ -36,7 +36,7 @@ class YearRangeFilter extends StatelessWidget {
 
           return GestureDetector(
             onTap: () =>
-                context.read<ResearchProvider>().setYearRange(optFrom, optTo),
+                context.read<ResearchViewModel>().setYearRange(optFrom, optTo),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 150),
               alignment: Alignment.center,

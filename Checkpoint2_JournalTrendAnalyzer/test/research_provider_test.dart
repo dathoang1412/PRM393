@@ -9,7 +9,7 @@ import 'package:journexa/features/research/data/datasources/openalex_service.dar
 import 'package:journexa/features/research/data/repositories/publication_repository_impl.dart';
 import 'package:journexa/features/research/domain/usecases/get_year_counts.dart';
 import 'package:journexa/features/research/domain/usecases/search_publications.dart';
-import 'package:journexa/features/research/presentation/providers/research_provider.dart';
+import 'package:journexa/features/research/presentation/viewmodels/research_viewmodel.dart';
 
 /// Builds a minimal OpenAlex `/works` search response body.
 String _searchResponse({
@@ -41,11 +41,11 @@ String _groupByResponse(Map<int, int> countsByYear, {int? total}) {
   });
 }
 
-ResearchProvider _providerWith(MockClientHandler handler) {
+ResearchViewModel _providerWith(MockClientHandler handler) {
   final repository = PublicationRepositoryImpl(
     service: OpenAlexService(client: MockClient(handler)),
   );
-  return ResearchProvider(
+  return ResearchViewModel(
     searchPublications: SearchPublications(repository),
     getYearCounts: GetYearCounts(repository),
   );
@@ -61,7 +61,7 @@ void main() {
     dotenv.testLoad();
   });
 
-  group('ResearchProvider.search', () {
+  group('ResearchViewModel.search', () {
     test('populates publications, totalCount, and success status', () async {
       final provider = _providerWith((request) async {
         return http.Response(
@@ -169,7 +169,7 @@ void main() {
     });
   });
 
-  group('ResearchProvider.loadMore', () {
+  group('ResearchViewModel.loadMore', () {
     test('appends the next page and updates totalCount/hasMore', () async {
       final provider = _providerWith((request) async {
         final page = request.url.queryParameters['page'];

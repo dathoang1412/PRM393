@@ -12,6 +12,7 @@ import 'package:journexa/features/research/data/models/publication.dart';
 import 'package:journexa/features/research/domain/usecases/analytics_calculator.dart';
 import '../viewmodels/research_viewmodel.dart';
 import '../widgets/filter_header.dart';
+import '../widgets/notification_bell.dart';
 import '../widgets/publication_card.dart';
 import '../widgets/trend_chart.dart';
 import 'publication_detail_screen.dart';
@@ -72,7 +73,10 @@ class _HomeScreenState extends State<HomeScreen> {
     final vm = context.watch<ResearchViewModel>();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Journexa')),
+      appBar: AppBar(
+        title: const Text('Journexa'),
+        actions: const [NotificationBell(), SizedBox(width: 4)],
+      ),
       body: CustomScrollView(
         slivers: [
           SliverToBoxAdapter(

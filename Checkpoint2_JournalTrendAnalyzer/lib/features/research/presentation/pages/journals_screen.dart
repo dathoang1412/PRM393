@@ -13,6 +13,7 @@ import 'package:journexa/core/widgets/section_card.dart';
 import 'package:journexa/features/research/data/models/publication.dart';
 import '../viewmodels/research_viewmodel.dart';
 import '../widgets/filter_header.dart';
+import '../widgets/notification_bell.dart';
 import '../widgets/rank_row.dart';
 import '../widgets/topic_context_bar.dart';
 import 'journal_detail_screen.dart';
@@ -79,7 +80,10 @@ class JournalsScreen extends StatelessWidget {
     final maxJournals = context.watch<RemoteConfigService>().maxJournals;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Journals')),
+      appBar: AppBar(
+        title: const Text('Journals'),
+        actions: const [NotificationBell(), SizedBox(width: 4)],
+      ),
       body: vm.publications.isEmpty
           ? EmptyView(
               icon: Icons.menu_book_outlined,

@@ -7,6 +7,7 @@ import 'package:journexa/core/widgets/metric_tile.dart';
 import 'package:journexa/core/widgets/section_card.dart';
 import 'package:journexa/features/research/domain/usecases/analytics_calculator.dart';
 import '../viewmodels/research_viewmodel.dart';
+import '../widgets/notification_bell.dart';
 import '../widgets/publication_card.dart';
 import '../widgets/trend_chart.dart';
 import 'publication_detail_screen.dart';
@@ -34,7 +35,10 @@ class JournalDetailScreen extends StatelessWidget {
     final fmt = NumberFormat.decimalPattern();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Journal Details')),
+      appBar: AppBar(
+        title: const Text('Journal Details'),
+        actions: const [NotificationBell(), SizedBox(width: 4)],
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

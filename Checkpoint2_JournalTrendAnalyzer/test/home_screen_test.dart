@@ -11,6 +11,7 @@ import 'package:journexa/features/research/data/repositories/publication_reposit
 import 'package:journexa/features/research/domain/usecases/get_year_counts.dart';
 import 'package:journexa/features/research/domain/usecases/search_publications.dart';
 import 'package:journexa/features/research/presentation/pages/home_screen.dart';
+import 'package:journexa/features/research/presentation/viewmodels/notifications_viewmodel.dart';
 import 'package:journexa/features/research/presentation/viewmodels/research_viewmodel.dart';
 import 'package:provider/provider.dart';
 
@@ -41,8 +42,11 @@ void main() {
     addTearDown(tester.view.reset);
 
     await tester.pumpWidget(
-      ChangeNotifierProvider(
-        create: (_) => _idleViewModel(),
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (_) => _idleViewModel()),
+          ChangeNotifierProvider(create: (_) => NotificationsViewModel()),
+        ],
         child: const MaterialApp(home: HomeScreen()),
       ),
     );

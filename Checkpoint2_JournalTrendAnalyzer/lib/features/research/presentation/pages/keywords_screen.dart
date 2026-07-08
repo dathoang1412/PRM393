@@ -13,6 +13,7 @@ import 'package:journexa/features/research/data/models/keyword_stat.dart';
 import 'package:journexa/features/research/domain/usecases/analytics_calculator.dart';
 import '../viewmodels/research_viewmodel.dart';
 import '../widgets/filter_header.dart';
+import '../widgets/notification_bell.dart';
 import '../widgets/rank_row.dart';
 import '../widgets/topic_context_bar.dart';
 import 'keyword_detail_screen.dart';
@@ -42,7 +43,10 @@ class KeywordsScreen extends StatelessWidget {
     final maxKeywords = context.watch<RemoteConfigService>().maxKeywords;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Keywords')),
+      appBar: AppBar(
+        title: const Text('Keywords'),
+        actions: const [NotificationBell(), SizedBox(width: 4)],
+      ),
       body: vm.publications.isEmpty
           ? EmptyView(
               icon: Icons.label_outline,

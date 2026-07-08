@@ -16,6 +16,8 @@ import 'package:journexa/features/research/domain/usecases/analytics_calculator.
 import '../viewmodels/auth_viewmodel.dart';
 import '../viewmodels/notifications_viewmodel.dart';
 import '../viewmodels/research_viewmodel.dart';
+import '../widgets/notification_bell.dart';
+import '../widgets/notification_detail_sheet.dart';
 
 /// Profile tab (spec 4.8): account info + sign-out, FCM Notification
 /// Center, PDF report export → Firebase Storage, Remote Config demo, and
@@ -135,7 +137,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final remoteConfig = context.watch<RemoteConfigService>();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Profile')),
+      appBar: AppBar(
+        title: const Text('Profile'),
+        actions: const [NotificationBell(), SizedBox(width: 4)],
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -173,21 +178,43 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ListTile(
                                   dense: true,
                                   contentPadding: EdgeInsets.zero,
+                                  onTap: () => showNotificationDetail(context, n),
                                   leading: const Icon(
                                       Icons.circle_notifications_outlined,
                                       color: AppColors.seriesAuthors),
                                   title: Text(n.title,
                                       style: const TextStyle(
                                           fontWeight: FontWeight.w600)),
-                                  subtitle: Text(n.body),
-                                  trailing: Text(
-                                    DateFormat.Hm().format(n.receivedAt),
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .labelSmall
-                                        ?.copyWith(
-                                            color: AppColors.inkMuted),
+                                  subtitle: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(n.body),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        DateFormat.Hm().format(n.receivedAt),
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .labelSmall
+                                            ?.copyWith(
+                                                color: AppColors.inkMuted),
+                                      ),
+                                    ],
                                   ),
+                                  trailing: n.imageUrl == null
+                                      ? null
+                                      : ClipRRect(
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                          child: Image.network(
+                                            n.imageUrl!,
+                                            width: 48,
+                                            height: 48,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (_, __, ___) =>
+                                                const SizedBox.shrink(),
+                                          ),
+                                        ),
                                 ),
                               Align(
                                 alignment: Alignment.centerRight,

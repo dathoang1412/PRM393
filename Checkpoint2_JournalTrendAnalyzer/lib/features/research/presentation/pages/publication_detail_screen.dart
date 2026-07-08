@@ -9,6 +9,7 @@ import 'package:journexa/core/firebase/analytics_service.dart';
 import 'package:journexa/features/research/data/models/publication.dart';
 import 'package:journexa/features/research/data/models/trend_point.dart';
 import 'package:journexa/features/research/domain/usecases/analytics_calculator.dart';
+import '../widgets/notification_bell.dart';
 
 class PublicationDetailScreen extends StatefulWidget {
   const PublicationDetailScreen({required this.publication, super.key});
@@ -92,6 +93,7 @@ class _PublicationDetailScreenState extends State<PublicationDetailScreen> {
                 );
               },
             ),
+          const NotificationBell(),
           const SizedBox(width: 4),
         ],
       ),

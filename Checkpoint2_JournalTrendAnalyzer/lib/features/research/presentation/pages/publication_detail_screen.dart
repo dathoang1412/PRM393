@@ -6,10 +6,17 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:journexa/core/firebase/analytics_service.dart';
+import 'package:journexa/core/theme/app_colors.dart';
+import 'package:journexa/core/widgets/app_bar_brand_title.dart';
+import 'package:journexa/core/widgets/metric_tile.dart';
+import 'package:journexa/core/widgets/section_card.dart';
 import 'package:journexa/features/research/data/models/publication.dart';
 import 'package:journexa/features/research/data/models/trend_point.dart';
 import 'package:journexa/features/research/domain/usecases/analytics_calculator.dart';
 import '../widgets/notification_bell.dart';
+import 'author_detail_screen.dart';
+import 'institution_detail_screen.dart';
+import 'keyword_detail_screen.dart';
 
 class PublicationDetailScreen extends StatefulWidget {
   const PublicationDetailScreen({required this.publication, super.key});
@@ -71,7 +78,7 @@ class _PublicationDetailScreenState extends State<PublicationDetailScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Publication Details'),
+        title: const AppBarBrandTitle('Publication Details'),
         actions: [
           IconButton(
             icon: const Icon(Icons.open_in_new),
@@ -125,13 +132,16 @@ class _PublicationDetailScreenState extends State<PublicationDetailScreen> {
                   Row(
                     children: [
                       if (pub.publicationYear != null) ...[
-                        _HeaderBadge(pub.publicationYear.toString()),
+                        _HeaderBadge(
+                          pub.publicationYear.toString(),
+                          color: Colors.white,
+                          textColor: AppColors.primaryDark,
+                        ),
                         const SizedBox(width: 8),
                       ],
                       if (pub.workType != null)
                         _HeaderBadge(
-                            AnalyticsCalculator.labelWorkType(pub.workType!),
-                            color: Colors.white.withValues(alpha: 0.25)),
+                            AnalyticsCalculator.labelWorkType(pub.workType!)),
                     ],
                   ),
                   const SizedBox(height: 10),
@@ -192,20 +202,65 @@ class _PublicationDetailScreenState extends State<PublicationDetailScreen> {
               ),
             ),
 
-            // ── Meta grid ─────────────────────────────────────────────────────
+            // ── KPI grid — same MetricTile used on every other screen ─────────
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-              child: _MetaGrid(publication: pub),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  const cols = 2;
+                  final aspect =
+                      (constraints.maxWidth - (cols - 1) * 10) / cols / 84.0;
+                  return GridView.count(
+                    crossAxisCount: cols,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    mainAxisSpacing: 10,
+                    crossAxisSpacing: 10,
+                    childAspectRatio: aspect,
+                    children: [
+                      MetricTile(
+                        icon: Icons.calendar_today_outlined,
+                        label: 'Year',
+                        value: pub.publicationYear?.toString() ?? 'Unknown',
+                        iconColor: AppColors.seriesCountries,
+                      ),
+                      MetricTile(
+                        icon: Icons.format_quote,
+                        label: 'Citations',
+                        value: fmt.format(pub.citedByCount),
+                        iconColor: AppColors.seriesCitations,
+                      ),
+                      MetricTile(
+                        icon: Icons.menu_book_outlined,
+                        label: 'Venue',
+                        value: pub.journalName ?? 'Unknown venue',
+                        iconColor: AppColors.seriesVenues,
+                      ),
+                      MetricTile(
+                        icon: Icons.link,
+                        label: 'DOI',
+                        value: pub.doi != null
+                            ? pub.doi!
+                                .replaceFirst('https://doi.org/', '')
+                                .replaceFirst('http://doi.org/', '')
+                            : 'Not available',
+                        iconColor: colorScheme.primary,
+                      ),
+                    ],
+                  );
+                },
+              ),
             ),
 
             // ── Citation trend chart ──────────────────────────────────────────
             if (citTrend.length >= 2) ...[
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-                child: _Section(
+                child: SectionCard(
                   icon: Icons.show_chart,
                   iconColor: citColor,
                   title: 'Citation Trend',
+                  subtitle: 'Citations received per calendar year',
                   child: SizedBox(
                     height: 160,
                     child: _MiniLineChart(
@@ -220,10 +275,11 @@ class _PublicationDetailScreenState extends State<PublicationDetailScreen> {
             // ── Authors section ───────────────────────────────────────────────
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-              child: _Section(
+              child: SectionCard(
                 icon: Icons.people_outline,
                 iconColor: colorScheme.primary,
                 title: 'Authors (${pub.authors.length})',
+                subtitle: 'From OpenAlex metadata',
                 child: pub.authors.isEmpty
                     ? const Text('Unknown authors')
                     : Wrap(
@@ -233,6 +289,12 @@ class _PublicationDetailScreenState extends State<PublicationDetailScreen> {
                             .map((a) => _TagChip(
                                   label: a,
                                   color: colorScheme.primary,
+                                  onTap: () => Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          AuthorDetailScreen(authorName: a),
+                                    ),
+                                  ),
                                 ))
                             .toList(),
                       ),
@@ -243,17 +305,24 @@ class _PublicationDetailScreenState extends State<PublicationDetailScreen> {
             if (pub.institutions.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-                child: _Section(
+                child: SectionCard(
                   icon: Icons.account_balance_outlined,
-                  iconColor: const Color(0xFFB45309),
+                  iconColor: AppColors.seriesCitations,
                   title: 'Institutions (${pub.institutions.length})',
+                  subtitle: 'Author affiliations',
                   child: Wrap(
                     spacing: 6,
                     runSpacing: 6,
                     children: pub.institutions
                         .map((inst) => _TagChip(
                               label: inst,
-                              color: const Color(0xFFB45309),
+                              color: AppColors.seriesCitations,
+                              onTap: () => Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => InstitutionDetailScreen(
+                                      institutionName: inst),
+                                ),
+                              ),
                             ))
                         .toList(),
                   ),
@@ -264,17 +333,24 @@ class _PublicationDetailScreenState extends State<PublicationDetailScreen> {
             if (pub.keywords.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-                child: _Section(
+                child: SectionCard(
                   icon: Icons.label_outline,
-                  iconColor: const Color(0xFF1791B8),
+                  iconColor: AppColors.seriesAuthors,
                   title: 'Research Concepts',
+                  subtitle: 'OpenAlex-assigned topics',
                   child: Wrap(
                     spacing: 6,
                     runSpacing: 6,
                     children: pub.keywords
                         .map((kw) => _TagChip(
                               label: kw,
-                              color: const Color(0xFF1791B8),
+                              color: AppColors.seriesAuthors,
+                              onTap: () => Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      KeywordDetailScreen(keyword: kw),
+                                ),
+                              ),
                             ))
                         .toList(),
                   ),
@@ -284,15 +360,16 @@ class _PublicationDetailScreenState extends State<PublicationDetailScreen> {
             // ── Abstract ──────────────────────────────────────────────────────
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
-              child: _Section(
+              child: SectionCard(
                 icon: Icons.article_outlined,
-                iconColor: const Color(0xFF515A66),
+                iconColor: AppColors.inkSecondary,
                 title: 'Abstract',
+                subtitle: 'As indexed by OpenAlex',
                 child: Text(
                   pub.abstractText ?? 'No abstract available from OpenAlex.',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         height: 1.75,
-                        color: const Color(0xFF3F4954),
+                        color: AppColors.ink,
                       ),
                 ),
               ),
@@ -300,122 +377,6 @@ class _PublicationDetailScreenState extends State<PublicationDetailScreen> {
           ],
         ),
       ),
-    );
-  }
-}
-
-// ── Meta grid ─────────────────────────────────────────────────────────────────
-
-class _MetaGrid extends StatelessWidget {
-  const _MetaGrid({required this.publication});
-
-  final Publication publication;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final fmt = NumberFormat.decimalPattern();
-
-    final items = <(IconData, String, String, Color)>[
-      (
-        Icons.calendar_today_outlined,
-        'Year',
-        publication.publicationYear?.toString() ?? 'Unknown',
-        const Color(0xFF12896B),
-      ),
-      (
-        Icons.format_quote,
-        'Citations',
-        fmt.format(publication.citedByCount),
-        const Color(0xFFB45309),
-      ),
-      (
-        Icons.menu_book_outlined,
-        'Venue',
-        publication.journalName ?? 'Unknown venue',
-        const Color(0xFF6D4FA3),
-      ),
-      (
-        Icons.link,
-        'DOI',
-        publication.doi != null
-            ? publication.doi!
-                .replaceFirst('https://doi.org/', '')
-                .replaceFirst('http://doi.org/', '')
-            : 'Not available',
-        colorScheme.primary,
-      ),
-    ];
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final cols = constraints.maxWidth > 520 ? 2 : 1;
-        return GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: items.length,
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: cols,
-            mainAxisSpacing: 10,
-            crossAxisSpacing: 10,
-            childAspectRatio: cols == 1 ? 5.2 : 3.8,
-          ),
-          itemBuilder: (context, index) {
-            final (icon, label, value, color) = items[index];
-            return Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: color.withValues(alpha: 0.15)),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(7),
-                    decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(icon, size: 15, color: color),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          label.toUpperCase(),
-                          style:
-                              Theme.of(context).textTheme.labelSmall?.copyWith(
-                                    color: const Color(0xFF8F8D84),
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 9,
-                                    letterSpacing: 0.7,
-                                  ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          value,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.spaceGrotesk(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 13,
-                            color: const Color(0xFF222D3A),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
     );
   }
 }
@@ -553,87 +514,58 @@ class _MiniLineChart extends StatelessWidget {
 
 // ── Shared widgets ────────────────────────────────────────────────────────────
 
-class _Section extends StatelessWidget {
-  const _Section({
-    required this.icon,
-    required this.iconColor,
-    required this.title,
-    required this.child,
-  });
-
-  final IconData icon;
-  final Color iconColor;
-  final String title;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: iconColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(7),
-                  ),
-                  child: Icon(icon, size: 14, color: iconColor),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF222D3A),
-                      ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            child,
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _TagChip extends StatelessWidget {
-  const _TagChip({required this.label, required this.color});
+  const _TagChip({required this.label, required this.color, this.onTap});
 
   final String label;
   final Color color;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final chip = Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.07),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: color.withValues(alpha: 0.18)),
       ),
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: color,
-              fontWeight: FontWeight.w600,
-            ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+          if (onTap != null) ...[
+            const SizedBox(width: 4),
+            Icon(Icons.arrow_outward, size: 12, color: color),
+          ],
+        ],
+      ),
+    );
+
+    if (onTap == null) return chip;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: chip,
       ),
     );
   }
 }
 
 class _HeaderBadge extends StatelessWidget {
-  const _HeaderBadge(this.label, {this.color});
+  const _HeaderBadge(this.label, {this.color, this.textColor});
 
   final String label;
   final Color? color;
+  final Color? textColor;
 
   @override
   Widget build(BuildContext context) {
@@ -646,7 +578,7 @@ class _HeaderBadge extends StatelessWidget {
       child: Text(
         label,
         style: GoogleFonts.spaceGrotesk(
-          color: Colors.white,
+          color: textColor ?? Colors.white,
           fontSize: 11,
           fontWeight: FontWeight.w700,
         ),

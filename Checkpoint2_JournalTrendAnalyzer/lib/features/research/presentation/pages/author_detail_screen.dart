@@ -10,34 +10,37 @@ import 'package:journexa/features/research/domain/usecases/analytics_calculator.
 import '../viewmodels/research_viewmodel.dart';
 import '../widgets/notification_bell.dart';
 import '../widgets/publication_card.dart';
+import '../widgets/rank_row.dart';
 import '../widgets/trend_chart.dart';
 import 'publication_detail_screen.dart';
 
-/// Journal Detail (spec 4.5): stats and related publications for one venue
-/// within the loaded topic.
-class JournalDetailScreen extends StatelessWidget {
-  const JournalDetailScreen({required this.journalName, super.key});
+/// Author Detail: stats and related publications for one author within the
+/// loaded topic. Reachable from Rankings → Authors and from author tags on
+/// Publication Detail.
+class AuthorDetailScreen extends StatelessWidget {
+  const AuthorDetailScreen({required this.authorName, super.key});
 
-  final String journalName;
+  final String authorName;
 
-  static const _color = AppColors.seriesVenues;
+  static const _color = AppColors.seriesAuthors;
 
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<ResearchViewModel>();
     final pubs = vm.filteredPublications
-        .where((p) => p.journalName == journalName)
+        .where((p) => p.authors.contains(authorName))
         .toList()
       ..sort((a, b) => b.citedByCount.compareTo(a.citedByCount));
 
     final totalCit = AnalyticsCalculator.totalCitations(pubs);
     final avgCit = pubs.isEmpty ? 0.0 : totalCit / pubs.length;
     final trends = AnalyticsCalculator.publicationTrends(pubs);
+    final journals = AnalyticsCalculator.topJournals(pubs).take(5).toList();
     final fmt = NumberFormat.decimalPattern();
 
     return Scaffold(
       appBar: AppBar(
-        title: const AppBarBrandTitle('Journal Details'),
+        title: const AppBarBrandTitle('Author Details'),
         actions: const [NotificationBell(), SizedBox(width: 4)],
       ),
       body: ListView(
@@ -64,11 +67,11 @@ class JournalDetailScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.menu_book_outlined,
+                        const Icon(Icons.person_outline,
                             color: Colors.white, size: 22),
                         const SizedBox(height: 8),
                         Text(
-                          journalName,
+                          authorName,
                           style: Theme.of(context)
                               .textTheme
                               .titleLarge
@@ -91,7 +94,7 @@ class JournalDetailScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 14),
-                  // ── KPIs (spec 4.5) ───────────────────────────────────
+                  // ── KPIs ──────────────────────────────────────────────
                   LayoutBuilder(builder: (context, constraints) {
                     final aspect =
                         (constraints.maxWidth - 2 * 10) / 3 / 100.0;
@@ -132,7 +135,7 @@ class JournalDetailScreen extends StatelessWidget {
                       icon: Icons.show_chart,
                       iconColor: _color,
                       title: 'Publication Activity',
-                      subtitle: 'Papers from this venue per year',
+                      subtitle: 'Papers by this author per year',
                       child: SizedBox(
                         height: 200,
                         child: TrendChart(
@@ -140,6 +143,26 @@ class JournalDetailScreen extends StatelessWidget {
                           color: _color,
                           unit: 'papers',
                         ),
+                      ),
+                    ),
+                  ],
+                  if (journals.isNotEmpty) ...[
+                    const SizedBox(height: 14),
+                    SectionCard(
+                      icon: Icons.menu_book_outlined,
+                      iconColor: AppColors.seriesVenues,
+                      title: 'Publishing Venues',
+                      subtitle: 'Where this author publishes most',
+                      child: Column(
+                        children: journals.asMap().entries.map((e) {
+                          return RankRow(
+                            rank: e.key + 1,
+                            name: e.value.name,
+                            count: e.value.publicationCount,
+                            total: pubs.length,
+                            color: AppColors.seriesVenues,
+                          );
+                        }).toList(),
                       ),
                     ),
                   ],

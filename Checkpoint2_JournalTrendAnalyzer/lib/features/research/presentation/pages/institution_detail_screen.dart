@@ -13,20 +13,21 @@ import '../widgets/publication_card.dart';
 import '../widgets/trend_chart.dart';
 import 'publication_detail_screen.dart';
 
-/// Journal Detail (spec 4.5): stats and related publications for one venue
-/// within the loaded topic.
-class JournalDetailScreen extends StatelessWidget {
-  const JournalDetailScreen({required this.journalName, super.key});
+/// Institution Detail: stats and related publications for one institution
+/// within the loaded topic. Reachable from Rankings → Institutions and from
+/// institution tags on Publication Detail.
+class InstitutionDetailScreen extends StatelessWidget {
+  const InstitutionDetailScreen({required this.institutionName, super.key});
 
-  final String journalName;
+  final String institutionName;
 
-  static const _color = AppColors.seriesVenues;
+  static const _color = AppColors.seriesCitations;
 
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<ResearchViewModel>();
     final pubs = vm.filteredPublications
-        .where((p) => p.journalName == journalName)
+        .where((p) => p.institutions.contains(institutionName))
         .toList()
       ..sort((a, b) => b.citedByCount.compareTo(a.citedByCount));
 
@@ -37,7 +38,7 @@ class JournalDetailScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const AppBarBrandTitle('Journal Details'),
+        title: const AppBarBrandTitle('Institution Details'),
         actions: const [NotificationBell(), SizedBox(width: 4)],
       ),
       body: ListView(
@@ -64,11 +65,11 @@ class JournalDetailScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.menu_book_outlined,
+                        const Icon(Icons.account_balance_outlined,
                             color: Colors.white, size: 22),
                         const SizedBox(height: 8),
                         Text(
-                          journalName,
+                          institutionName,
                           style: Theme.of(context)
                               .textTheme
                               .titleLarge
@@ -91,7 +92,7 @@ class JournalDetailScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 14),
-                  // ── KPIs (spec 4.5) ───────────────────────────────────
+                  // ── KPIs ──────────────────────────────────────────────
                   LayoutBuilder(builder: (context, constraints) {
                     final aspect =
                         (constraints.maxWidth - 2 * 10) / 3 / 100.0;
@@ -132,7 +133,7 @@ class JournalDetailScreen extends StatelessWidget {
                       icon: Icons.show_chart,
                       iconColor: _color,
                       title: 'Publication Activity',
-                      subtitle: 'Papers from this venue per year',
+                      subtitle: 'Papers from this institution per year',
                       child: SizedBox(
                         height: 200,
                         child: TrendChart(

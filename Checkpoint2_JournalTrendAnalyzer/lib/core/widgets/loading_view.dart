@@ -16,29 +16,31 @@ class LoadingView extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Image.asset(
-            AppImages.loading,
-            width: 280,
-            height: 280,
-            fit: BoxFit.contain,
-            gaplessPlayback: true,
-            // Fall back to the plain spinner if the GIF asset can't load
-            // (e.g. widget tests, or the file being removed).
-            errorBuilder: (context, _, __) => Container(
-              width: 72,
-              height: 72,
-              decoration: BoxDecoration(
-                color: primary.withValues(alpha: 0.07),
-                shape: BoxShape.circle,
-              ),
-              child: Center(
-                child: SizedBox(
-                  width: 32,
-                  height: 32,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 3,
-                    color: primary,
-                    strokeCap: StrokeCap.round,
+          ClipOval(
+            child: Image.asset(
+              AppImages.loading,
+              width: 280,
+              height: 280,
+              fit: BoxFit.cover,
+              gaplessPlayback: true,
+              // Fall back to the plain spinner if the GIF asset can't load
+              // (e.g. widget tests, or the file being removed).
+              errorBuilder: (context, _, __) => Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: primary.withValues(alpha: 0.07),
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: SizedBox(
+                    width: 32,
+                    height: 32,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 3,
+                      color: primary,
+                      strokeCap: StrokeCap.round,
+                    ),
                   ),
                 ),
               ),

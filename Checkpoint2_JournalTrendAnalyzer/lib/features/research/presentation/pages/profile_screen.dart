@@ -10,6 +10,7 @@ import 'package:journexa/core/firebase/remote_config_service.dart';
 import 'package:journexa/core/firebase/storage_service.dart';
 import 'package:journexa/core/theme/app_colors.dart';
 import 'package:journexa/core/utils/app_feedback.dart';
+import 'package:journexa/core/widgets/app_bar_brand_title.dart';
 import 'package:journexa/core/utils/pdf_report.dart';
 import 'package:journexa/core/widgets/section_card.dart';
 import 'package:journexa/features/research/domain/usecases/analytics_calculator.dart';
@@ -138,7 +139,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Profile'),
+        title: const AppBarBrandTitle('Profile'),
         actions: const [NotificationBell(), SizedBox(width: 4)],
       ),
       body: ListView(

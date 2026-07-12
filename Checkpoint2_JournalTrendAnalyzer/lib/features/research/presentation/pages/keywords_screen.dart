@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:journexa/core/firebase/analytics_service.dart';
 import 'package:journexa/core/firebase/remote_config_service.dart';
 import 'package:journexa/core/theme/app_colors.dart';
+import 'package:journexa/core/widgets/app_bar_brand_title.dart';
 import 'package:journexa/core/widgets/empty_view.dart';
 import 'package:journexa/core/widgets/horizontal_bar_chart.dart';
 import 'package:journexa/core/widgets/insight_note.dart';
@@ -44,7 +45,7 @@ class KeywordsScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Keywords'),
+        title: const AppBarBrandTitle('Keywords'),
         actions: const [NotificationBell(), SizedBox(width: 4)],
       ),
       body: vm.publications.isEmpty

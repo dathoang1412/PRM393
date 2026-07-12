@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import 'package:journexa/core/theme/app_colors.dart';
+import 'package:journexa/core/widgets/app_bar_brand_title.dart';
 import 'package:journexa/core/widgets/empty_view.dart';
 import 'package:journexa/core/widgets/error_view.dart';
 import 'package:journexa/core/widgets/loading_view.dart';
@@ -16,6 +17,7 @@ import '../widgets/notification_bell.dart';
 import '../widgets/publication_card.dart';
 import '../widgets/trend_chart.dart';
 import 'publication_detail_screen.dart';
+import 'rankings_screen.dart';
 
 const _kQuickTopics = [
   'Artificial Intelligence',
@@ -68,14 +70,28 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _openRankings() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const RankingsScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<ResearchViewModel>();
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Journexa'),
-        actions: const [NotificationBell(), SizedBox(width: 4)],
+        title: const AppBarBrandTitle('Journexa'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.leaderboard_outlined),
+            tooltip: 'Rankings',
+            onPressed: _openRankings,
+          ),
+          const NotificationBell(),
+          const SizedBox(width: 4),
+        ],
       ),
       body: CustomScrollView(
         slivers: [

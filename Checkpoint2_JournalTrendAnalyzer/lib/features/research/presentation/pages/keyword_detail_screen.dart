@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import 'package:journexa/core/theme/app_colors.dart';
+import 'package:journexa/core/widgets/app_bar_brand_title.dart';
 import 'package:journexa/core/widgets/metric_tile.dart';
 import 'package:journexa/core/widgets/section_card.dart';
 import 'package:journexa/features/research/domain/usecases/analytics_calculator.dart';
@@ -38,7 +39,7 @@ class KeywordDetailScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Keyword Analysis'),
+        title: const AppBarBrandTitle('Keyword Analysis'),
         actions: const [NotificationBell(), SizedBox(width: 4)],
       ),
       body: ListView(

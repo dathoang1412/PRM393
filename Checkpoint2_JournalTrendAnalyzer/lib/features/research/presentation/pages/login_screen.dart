@@ -31,7 +31,6 @@ class LoginScreen extends StatelessWidget {
                       width: 76,
                       height: 76,
                       decoration: BoxDecoration(
-                        color: AppColors.primary,
                         borderRadius: BorderRadius.circular(22),
                         boxShadow: [
                           BoxShadow(
@@ -41,8 +40,13 @@ class LoginScreen extends StatelessWidget {
                           ),
                         ],
                       ),
-                      child: const Icon(Icons.auto_stories,
-                          color: Colors.white, size: 36),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(22),
+                        child: Image.asset(
+                          'assets/images/app_icon.png',
+                          fit: BoxFit.cover,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 22),

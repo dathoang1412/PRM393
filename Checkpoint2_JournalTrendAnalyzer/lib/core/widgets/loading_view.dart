@@ -19,8 +19,8 @@ class LoadingView extends StatelessWidget {
           ClipOval(
             child: Image.asset(
               AppImages.loading,
-              width: 280,
-              height: 280,
+              width: 140,
+              height: 140,
               fit: BoxFit.cover,
               gaplessPlayback: true,
               // Fall back to the plain spinner if the GIF asset can't load

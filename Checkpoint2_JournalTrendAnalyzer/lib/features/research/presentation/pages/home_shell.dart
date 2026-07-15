@@ -56,7 +56,6 @@ class _HomeShellState extends State<HomeShell> {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: primary,
                   borderRadius: BorderRadius.circular(14),
                   boxShadow: [
                     BoxShadow(
@@ -66,10 +65,12 @@ class _HomeShellState extends State<HomeShell> {
                     ),
                   ],
                 ),
-                child: const Icon(
-                  Icons.auto_stories,
-                  color: Colors.white,
-                  size: 22,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(14),
+                  child: Image.asset(
+                    'assets/images/app_icon.png',
+                    fit: BoxFit.cover,
+                  ),
                 ),
               ),
             ),
